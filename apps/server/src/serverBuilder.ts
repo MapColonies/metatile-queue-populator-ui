@@ -11,6 +11,7 @@ import { Registry } from 'prom-client';
 import type { ConfigType } from '@common/config';
 import { SERVICES } from '@common/constants';
 import { TILES_ROUTER_SYMBOL } from './tiles/routes/tilesRouter';
+import { SPATIAL_ROUTER_SYMBOL } from './spatial/routes/spatialRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -20,7 +21,8 @@ export class ServerBuilder {
     @inject(SERVICES.CONFIG) private readonly config: ConfigType,
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.METRICS) private readonly metricsRegistry: Registry,
-    @inject(TILES_ROUTER_SYMBOL) private readonly tilesRouter: Router
+    @inject(TILES_ROUTER_SYMBOL) private readonly tilesRouter: Router,
+    @inject(SPATIAL_ROUTER_SYMBOL) private readonly spatialRouter: Router
   ) {
     this.serverInstance = express();
   }
@@ -44,6 +46,7 @@ export class ServerBuilder {
 
   private buildRoutes(): void {
     this.serverInstance.use('/tiles', this.tilesRouter);
+    this.serverInstance.use('/spatial', this.spatialRouter);
     this.buildDocsRoutes();
   }
 
@@ -57,7 +60,7 @@ export class ServerBuilder {
 
     this.serverInstance.use(json(this.config.get('server.request.payload')));
 
-    const ignorePathRegex = new RegExp(`^${this.config.get('openapiConfig.basePath')}/.*`, 'i');
+    const ignorePathRegex = new RegExp(`^(${this.config.get('openapiConfig.basePath')}|/spatial/convert).*`, 'i');
     const apiSpecPath = this.config.get('openapiConfig.filePath');
     this.serverInstance.use(OpenApiMiddleware({ apiSpec: apiSpecPath, validateRequests: true, ignorePaths: ignorePathRegex }));
   }

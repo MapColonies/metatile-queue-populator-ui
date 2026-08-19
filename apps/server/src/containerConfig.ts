@@ -7,6 +7,7 @@ import { type InjectionObject, registerDependencies } from '@common/dependencyRe
 import { SERVICES, SERVICE_NAME } from '@common/constants';
 import { getTracing } from '@common/tracing';
 import { TILES_ROUTER_SYMBOL, tilesRouterFactory } from './tiles/routes/tilesRouter';
+import { SPATIAL_ROUTER_SYMBOL, spatialRouterFactory } from './spatial/routes/spatialRouter';
 import { getConfig } from './common/config';
 
 export interface RegisterOptions {
@@ -31,6 +32,7 @@ export const registerExternalValues = async (options?: RegisterOptions): Promise
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
     { token: SERVICES.METRICS, provider: { useValue: metricsRegistry } },
     { token: TILES_ROUTER_SYMBOL, provider: { useFactory: tilesRouterFactory } },
+    { token: SPATIAL_ROUTER_SYMBOL, provider: { useFactory: spatialRouterFactory } },
     {
       token: 'onSignal',
       provider: {

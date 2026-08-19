@@ -38,6 +38,23 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/spatial/convert': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Convert uploaded Shapefile (.zip), KML, WKT, or GeoJSON to WGS84 GeoJSON */
+    post: operations['convertSpatial'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tiles/list': {
     parameters: {
       query?: never;
@@ -187,6 +204,43 @@ export interface operations {
               metatiles?: number;
               tiles?: number;
             }[];
+          };
+        };
+      };
+      400: components['responses']['BadRequest'];
+      '5XX': components['responses']['UnexpectedError'];
+    };
+  };
+  convertSpatial: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        'multipart/form-data': {
+          /** Format: binary */
+          file?: string;
+        };
+        'application/json': {
+          text?: string;
+          format?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** @example FeatureCollection */
+            type: string;
+            features: Record<string, never>[];
           };
         };
       };

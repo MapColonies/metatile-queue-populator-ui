@@ -113,6 +113,51 @@ paths:
           $ref: '#/components/responses/BadRequest'
         5XX:
           $ref: '#/components/responses/UnexpectedError'
+  /spatial/convert:
+    post:
+      operationId: convertSpatial
+      tags:
+        - spatial
+      summary: Convert uploaded Shapefile (.zip), KML, WKT, or GeoJSON to WGS84 GeoJSON
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                format:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - type
+                  - features
+                properties:
+                  type:
+                    type: string
+                    example: FeatureCollection
+                  features:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
   /tiles/list:
     post:
       operationId: postTilesList
