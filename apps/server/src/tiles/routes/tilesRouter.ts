@@ -10,6 +10,7 @@ export const tilesRouterFactory: FactoryFunction<Router> = (dependencyContainer)
 
   router.post('/area', controller.postTilesArea);
   router.post('/list', controller.postTilesList);
+  router.post('/estimate', controller.postEstimateTiles);
 
   return router;
 };

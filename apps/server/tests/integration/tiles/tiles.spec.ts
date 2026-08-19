@@ -93,4 +93,26 @@ describe('Tiles Routes Integration', () => {
       expect(response.status).toBe(400);
     });
   });
+
+  describe('POST /tiles/estimate', () => {
+    it('should return 200 OK with accurate breakdown for valid bbox area', async () => {
+      const body = {
+        minZoom: 0,
+        maxZoom: 3,
+        area: [34.0, 31.0, 35.0, 32.0],
+        metatile: 8,
+      };
+
+      const response = await supertest(app)
+        .post('/tiles/estimate')
+        .send(body)
+        .set('Content-Type', 'application/json');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('totalMetatiles');
+      expect(response.body).toHaveProperty('totalTiles');
+      expect(response.body).toHaveProperty('breakdown');
+      expect(response.body.breakdown).toHaveLength(4);
+    });
+  });
 });

@@ -43,6 +43,76 @@ paths:
           $ref: '#/components/responses/Conflict'
         5XX:
           $ref: '#/components/responses/UnexpectedError'
+  /tiles/estimate:
+    post:
+      operationId: estimateTiles
+      tags:
+        - tiles
+      summary: Estimate tile and metatile counts for a given area and zoom range
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - minZoom
+                - maxZoom
+                - area
+              properties:
+                minZoom:
+                  type: integer
+                  minimum: 0
+                  maximum: 18
+                maxZoom:
+                  type: integer
+                  minimum: 0
+                  maximum: 18
+                metatile:
+                  type: integer
+                  default: 8
+                area:
+                  oneOf:
+                    - type: array
+                      items:
+                        type: number
+                      minItems: 4
+                      maxItems: 4
+                    - type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - totalMetatiles
+                  - totalTiles
+                  - metatileSize
+                  - breakdown
+                properties:
+                  totalMetatiles:
+                    type: integer
+                  totalTiles:
+                    type: integer
+                  metatileSize:
+                    type: integer
+                  breakdown:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        zoom:
+                          type: integer
+                        metatiles:
+                          type: integer
+                        tiles:
+                          type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
   /tiles/list:
     post:
       operationId: postTilesList
