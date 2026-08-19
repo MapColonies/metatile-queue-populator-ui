@@ -18,6 +18,7 @@ import {
 import SendIcon from '@mui/icons-material/Send';
 import LayersIcon from '@mui/icons-material/Layers';
 import { SelectedArea } from '../types/geometry.ts';
+import { TileEstimationWidget } from './TileEstimationWidget.tsx';
 import axios from 'axios';
 
 interface AreaFormProps {
@@ -167,6 +168,9 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea }) => {
               disableSwap
             />
           </Box>
+
+          {/* Real-time Tile Estimation Preview */}
+          <TileEstimationWidget selectedArea={selectedArea} zoomRange={zoomRange} />
 
           {/* Priority */}
           <TextField
