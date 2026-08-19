@@ -7,6 +7,8 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { darkTheme } from './theme/index.ts';
 import { Header } from './components/Header.tsx';
 import { MapComponent } from './components/MapComponent.tsx';
+import { AreaForm } from './components/AreaForm.tsx';
+import { SelectedArea } from './types/geometry.ts';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -33,6 +35,7 @@ function CustomTabPanel(props: TabPanelProps) {
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
+  const [selectedArea, setSelectedArea] = useState<SelectedArea>(null);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -64,8 +67,11 @@ export const App: React.FC = () => {
         {/* Tab Content Areas */}
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <CustomTabPanel value={currentTab} index={0}>
-            <Box sx={{ flexGrow: 1, width: '100%', height: '100%', position: 'relative' }}>
-              <MapComponent />
+            <Box sx={{ flexGrow: 1, width: '100%', height: '100%', position: 'relative', display: 'flex' }}>
+              <MapComponent onAreaSelected={setSelectedArea} />
+              <Box sx={{ position: 'absolute', top: 16, right: 70, zIndex: 10 }}>
+                <AreaForm selectedArea={selectedArea} />
+              </Box>
             </Box>
           </CustomTabPanel>
 

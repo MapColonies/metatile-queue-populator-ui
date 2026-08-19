@@ -1,106 +1,177 @@
 openapi: 3.0.1
 info:
-  title: service-name
-  description: basic template for map colonies service
+  title: metatile-queue-populator-ui-bff
+  description: BFF Service for Metatile Queue Populator UI
   version: 1.0.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
 paths:
-  /anotherResource:
-    get:
-      operationId: getAnotherResource
-      tags:
-        - anotherResource
-      summary: gets the resource
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/anotherResource'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error'
-  /resourceName:
-    get:
-      operationId: getResourceName
-      tags:
-        - resourceName
-      summary: gets the resource
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/resource'
-        400:
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/error'
+  /tiles/area:
     post:
-      operationId: createResource
+      operationId: postTilesByArea
       tags:
-        - resourceName
-      summary: creates a new record of type resource
+        - tiles
+      summary: Add all metatiles in given area to queue
+      parameters:
+        - in: query
+          name: force
+          required: false
+          schema:
+            type: boolean
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/resource'
+              oneOf:
+                - $ref: '#/components/schemas/BboxTilesRequest'
+                - $ref: '#/components/schemas/GeometryTilesRequest'
+                - $ref: '#/components/schemas/MultiAreaTilesRequest'
       responses:
-        201:
-          description: created
+        '200':
+          description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/resource'
-        400:
-          description: Bad Request
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+  /tiles/list:
+    post:
+      operationId: postTilesList
+      tags:
+        - tiles
+      summary: Add specific metatiles to queue
+      parameters:
+        - in: query
+          name: force
+          required: false
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TilesListRequest'
+      responses:
+        '200':
+          description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error'
+                properties:
+                  message:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
 security:
   - {}
 components:
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnexpectedError:
+      description: Unexpected Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
-    error:
+    Error:
       type: object
       required:
         - message
       properties:
         message:
           type: string
-    resource:
+    TilesListRequest:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required:
+          - z
+          - x
+          - y
+        properties:
+          x:
+            type: integer
+          y:
+            type: integer
+          z:
+            type: integer
+          metatile:
+            type: integer
+            default: 1
+    BaseAreaRequest:
       type: object
       required:
-        - id
-        - name
-        - description
+        - minZoom
+        - maxZoom
       properties:
-        id:
-          type: number
-          format: int64
-        name:
-          type: string
-        description:
-          type: string
-    anotherResource:
-      type: object
-      required:
-        - kind
-        - isAlive
-      properties:
-        kind:
-          type: string
-        isAlive:
-          type: boolean
+        minZoom:
+          type: integer
+          minimum: 0
+          maximum: 18
+        maxZoom:
+          type: integer
+          minimum: 0
+          maximum: 18
+        priority:
+          type: integer
+          minimum: 0
+          default: 0
+    BboxTilesRequest:
+      allOf:
+        - $ref: '#/components/schemas/BaseAreaRequest'
+        - type: object
+          required:
+            - area
+          properties:
+            area:
+              type: array
+              items:
+                type: number
+              minItems: 4
+              maxItems: 4
+    GeometryTilesRequest:
+      allOf:
+        - $ref: '#/components/schemas/BaseAreaRequest'
+        - type: object
+          required:
+            - area
+          properties:
+            area:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+    MultiAreaTilesRequest:
+      type: array
+      minItems: 1
+      items:
+        anyOf:
+          - $ref: '#/components/schemas/BboxTilesRequest'
+          - $ref: '#/components/schemas/GeometryTilesRequest'

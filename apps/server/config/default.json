@@ -23,7 +23,7 @@
     "port": 8080,
     "request": {
       "payload": {
-        "limit": "1mb"
+        "limit": "20mb"
       }
     },
     "response": {
@@ -32,5 +32,8 @@
         "options": null
       }
     }
+  },
+  "populator": {
+    "url": "http://localhost:8081"
   }
 }

@@ -1,1 +1,39 @@
-{}
+{
+  "openapiConfig": {
+    "filePath": "./openapi3.yaml",
+    "basePath": "/docs",
+    "rawPath": "/api",
+    "uiPath": "/api"
+  },
+  "telemetry": {
+    "metrics": {},
+    "tracing": {
+      "isEnabled": false
+    },
+    "shared": {},
+    "logger": {
+      "level": "error",
+      "prettyPrint": false,
+      "opentelemetryOptions": {
+        "enabled": false
+      }
+    }
+  },
+  "server": {
+    "port": 8080,
+    "request": {
+      "payload": {
+        "limit": "20mb"
+      }
+    },
+    "response": {
+      "compression": {
+        "enabled": true,
+        "options": null
+      }
+    }
+  },
+  "populator": {
+    "url": "http://localhost:8081"
+  }
+}
