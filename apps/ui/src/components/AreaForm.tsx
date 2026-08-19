@@ -12,14 +12,11 @@ import {
   Alert,
   Snackbar,
   CircularProgress,
-  MenuItem,
-  Select,
-  FormControl,
-  InputLabel,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
+  Autocomplete,
   Stack,
   Chip,
 } from '@mui/material';
@@ -216,98 +213,50 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
         Calculate and queue metatiles within the selected geographical boundary.
       </Typography>
 
-      {/* Preset Selector */}
+      {/* Preset Selector Autocomplete */}
       {presets.length > 0 && (
-        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <InputLabel id="preset-select-label">Load Preset (Continent / Sub-region / Country)</InputLabel>
-          <Select
-            labelId="preset-select-label"
-            label="Load Preset (Continent / Sub-region / Country)"
-            value={selectedPresetId}
-            onChange={(e) => handlePresetSelect(e.target.value as string)}
-          >
-            {/* Group: Continents */}
-            <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
-              ── CONTINENTS ──
-            </MenuItem>
-            {presets
-              .filter((p) => p.category === 'Continent' || p.id.startsWith('continent-'))
-              .map((preset) => (
-                <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      🌍 {preset.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Z{preset.minZoom}-Z{preset.maxZoom} • Continent extent
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-
-            {/* Group: Sub-regions */}
-            <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
-              ── SUB-REGIONS ──
-            </MenuItem>
-            {presets
-              .filter((p) => p.category === 'Subregion' || p.id.startsWith('subregion-'))
-              .map((preset) => (
-                <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      🗺️ {preset.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Z{preset.minZoom}-Z{preset.maxZoom} • {preset.continent || 'Region'}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-
-            {/* Group: Countries */}
-            <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
-              ── COUNTRIES ──
-            </MenuItem>
-            {presets
-              .filter((p) => p.category === 'Country' || p.id.startsWith('country-') || p.id.startsWith('default-'))
-              .slice(0, 100)
-              .map((preset) => (
-                <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      🚩 {preset.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Z{preset.minZoom}-Z{preset.maxZoom} • {preset.subregion || preset.continent || 'Country'}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              ))}
-
-            {/* Group: Custom Saved Presets */}
-            {presets.some((p) => p.category === 'Custom' || (!p.id.startsWith('continent-') && !p.id.startsWith('subregion-') && !p.id.startsWith('country-') && !p.id.startsWith('default-'))) && (
-              <>
-                <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
-                  ── CUSTOM BOOKMARKS ──
-                </MenuItem>
-                {presets
-                  .filter((p) => p.category === 'Custom' || (!p.id.startsWith('continent-') && !p.id.startsWith('subregion-') && !p.id.startsWith('country-') && !p.id.startsWith('default-')))
-                  .map((preset) => (
-                    <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                          ⭐ {preset.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          Z{preset.minZoom}-Z{preset.maxZoom}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-              </>
-            )}
-          </Select>
-        </FormControl>
+        <Autocomplete
+          fullWidth
+          size="small"
+          options={presets}
+          groupBy={(option) => {
+            if (option.category === 'Continent' || option.id.startsWith('continent-')) return 'Continents 🌍';
+            if (option.category === 'Subregion' || option.id.startsWith('subregion-')) return 'Sub-regions 🗺️';
+            if (option.category === 'Country' || option.id.startsWith('country-') || option.id.startsWith('default-')) return 'Countries 🚩';
+            return 'Custom Bookmarks ⭐';
+          }}
+          getOptionLabel={(option) => option.name}
+          value={presets.find((p) => p.id === selectedPresetId) || null}
+          onChange={(_e, val) => handlePresetSelect(val ? val.id : '')}
+          isOptionEqualToValue={(option, val) => option.id === val.id}
+          ListboxProps={{
+            style: {
+              maxHeight: 350,
+              overflowY: 'auto',
+            },
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Load Preset (Continent / Sub-region / Country)"
+              placeholder="Type to search countries, regions..."
+            />
+          )}
+          renderOption={(props, option) => {
+            const { key, ...otherProps } = props;
+            return (
+              <Box key={key} component="li" {...otherProps} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 0.75, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {option.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Z{option.minZoom}-Z{option.maxZoom} • {option.subregion || option.continent || option.description || 'Preset Area'}
+                </Typography>
+              </Box>
+            );
+          }}
+          sx={{ mb: 2 }}
+        />
       )}
 
       {/* Spatial File Dropzone */}
