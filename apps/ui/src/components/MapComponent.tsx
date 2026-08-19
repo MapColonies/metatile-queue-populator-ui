@@ -1,9 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Box, Paper, Typography, IconButton, Tooltip, ButtonGroup, Chip } from '@mui/material';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Box, Paper, Typography, IconButton, Tooltip, ButtonGroup, Chip, Divider, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import CropSquareIcon from '@mui/icons-material/CropSquare';
+import PolylineIcon from '@mui/icons-material/Polyline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import PanToolIcon from '@mui/icons-material/PanTool';
 
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -11,36 +15,127 @@ import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
+import Draw, { createBox } from 'ol/interaction/Draw';
+import GeoJSON from 'ol/format/GeoJSON';
+import { Style, Fill, Stroke } from 'ol/style';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
+import { DrawMode, SelectedArea } from '../types/geometry.ts';
 import 'ol/ol.css';
 
 interface MapComponentProps {
-  vectorSource?: VectorSource;
+  onAreaSelected?: (area: SelectedArea) => void;
   onMapReady?: (map: Map) => void;
 }
 
-export const MapComponent: React.FC<MapComponentProps> = ({ vectorSource: externalVectorSource, onMapReady }) => {
+const vectorStyle = new Style({
+  fill: new Fill({
+    color: 'rgba(0, 163, 224, 0.25)', // Primary accent translucent
+  }),
+  stroke: new Stroke({
+    color: '#00a3e0',
+    width: 2.5,
+  }),
+});
+
+export const MapComponent: React.FC<MapComponentProps> = ({ onAreaSelected, onMapReady }) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
-  const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.0000', lat: '0.0000' });
-  const [zoomLevel, setZoomLevel] = useState<number>(3);
+  const vectorSourceRef = useRef<VectorSource>(new VectorSource());
+  const drawInteractionRef = useRef<Draw | null>(null);
 
-  const localVectorSource = useRef(new VectorSource());
-  const activeVectorSource = externalVectorSource ?? localVectorSource.current;
+  const [drawMode, setDrawMode] = useState<DrawMode>('none');
+  const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.0000', lat: '0.0000' });
+  const [zoomLevel, setZoomLevel] = useState<number>(7);
+  const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
+
+  const updateDrawnArea = useCallback(() => {
+    const features = vectorSourceRef.current.getFeatures();
+    if (features.length === 0) {
+      setHasDrawnGeometry(false);
+      onAreaSelected?.(null);
+      return;
+    }
+
+    setHasDrawnGeometry(true);
+    const feature = features[features.length - 1]; // Latest feature
+    const geometry = feature.getGeometry();
+    if (!geometry) return;
+
+    const geojsonFormat = new GeoJSON();
+    const geojsonObject = geojsonFormat.writeFeatureObject(feature, {
+      featureProjection: 'EPSG:3857',
+      dataProjection: 'EPSG:4326',
+    });
+
+    if (drawMode === 'bbox') {
+      const extent = geometry.getExtent();
+      const minPoint = toLonLat([extent[0], extent[1]]);
+      const maxPoint = toLonLat([extent[2], extent[3]]);
+      const bbox: [number, number, number, number] = [
+        Number(minPoint[0].toFixed(6)),
+        Number(minPoint[1].toFixed(6)),
+        Number(maxPoint[0].toFixed(6)),
+        Number(maxPoint[1].toFixed(6)),
+      ];
+      onAreaSelected?.({ type: 'bbox', bbox });
+    } else {
+      onAreaSelected?.({ type: 'geojson', geojson: geojsonObject });
+    }
+  }, [drawMode, onAreaSelected]);
+
+  // Handle active drawing interaction
+  const setDrawingInteraction = useCallback((mode: DrawMode) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (drawInteractionRef.current) {
+      map.removeInteraction(drawInteractionRef.current);
+      drawInteractionRef.current = null;
+    }
+
+    if (mode === 'none') {
+      return;
+    }
+
+    const draw = new Draw({
+      source: vectorSourceRef.current,
+      type: mode === 'bbox' ? 'Circle' : 'Polygon',
+      geometryFunction: mode === 'bbox' ? createBox() : undefined,
+    });
+
+    draw.on('drawstart', () => {
+      // Clear previous feature so only one active area exists
+      vectorSourceRef.current.clear();
+    });
+
+    draw.on('drawend', () => {
+      setTimeout(() => {
+        updateDrawnArea();
+      }, 50);
+    });
+
+    map.addInteraction(draw);
+    drawInteractionRef.current = draw;
+  }, [updateDrawnArea]);
+
+  useEffect(() => {
+    setDrawingInteraction(drawMode);
+  }, [drawMode, setDrawingInteraction]);
 
   useEffect(() => {
     if (!mapElement.current || mapRef.current) return;
 
     const initialView = new View({
-      center: fromLonLat([34.7818, 32.0853]), // Default center (Israel / Mediterranean region)
+      center: fromLonLat([34.7818, 32.0853]),
       zoom: 7,
       maxZoom: 19,
       minZoom: 2,
     });
 
     const vectorLayer = new VectorLayer({
-      source: activeVectorSource,
+      source: vectorSourceRef.current,
+      style: vectorStyle,
     });
 
     const map = new Map({
@@ -90,6 +185,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({ vectorSource: extern
     };
   }, []);
 
+  const handleClearArea = () => {
+    vectorSourceRef.current.clear();
+    setHasDrawnGeometry(false);
+    onAreaSelected?.(null);
+  };
+
   const handleZoomIn = () => {
     const view = mapRef.current?.getView();
     if (view) {
@@ -129,10 +230,71 @@ export const MapComponent: React.FC<MapComponentProps> = ({ vectorSource: extern
 
   return (
     <Box sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: 1 }}>
-      {/* OpenLayers Map Canvas */}
+      {/* Map Canvas */}
       <div ref={mapElement} style={{ width: '100%', height: '100%', background: '#1c242c' }} />
 
-      {/* Floating Control Toolbar */}
+      {/* Drawing Toolbar (Top Left) */}
+      <Paper
+        elevation={4}
+        sx={{
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          display: 'flex',
+          alignItems: 'center',
+          p: 0.5,
+          bgcolor: 'rgba(26, 34, 40, 0.92)',
+          backdropFilter: 'blur(6px)',
+          border: '1px solid',
+          borderColor: 'divider',
+          zIndex: 10,
+          borderRadius: 2,
+        }}
+      >
+        <ToggleButtonGroup
+          value={drawMode}
+          exclusive
+          onChange={(_e, newMode) => {
+            if (newMode !== null) setDrawMode(newMode);
+          }}
+          size="small"
+          aria-label="map drawing tools"
+        >
+          <ToggleButton value="none" aria-label="pan map">
+            <Tooltip title="Pan Map (Navigate)">
+              <PanToolIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="bbox" aria-label="draw bounding box">
+            <Tooltip title="Draw Bounding Box (Drag)">
+              <CropSquareIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="polygon" aria-label="draw polygon">
+            <Tooltip title="Draw Polygon">
+              <PolylineIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
+
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.8 }} />
+
+        <Tooltip title="Clear Drawn Area">
+          <span>
+            <IconButton
+              size="small"
+              color="error"
+              onClick={handleClearArea}
+              disabled={!hasDrawnGeometry}
+              sx={{ p: 0.8 }}
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Paper>
+
+      {/* Navigation Toolbar (Top Right) */}
       <Paper
         elevation={3}
         sx={{
@@ -172,7 +334,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ vectorSource: extern
         </ButtonGroup>
       </Paper>
 
-      {/* Floating Bottom Coordinates & Zoom Readout */}
+      {/* Bottom Coordinates & Mode Info */}
       <Paper
         elevation={2}
         sx={{
@@ -195,6 +357,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({ vectorSource: extern
           Lon: <strong style={{ color: '#fff' }}>{coordinates.lon}°</strong> | Lat: <strong style={{ color: '#fff' }}>{coordinates.lat}°</strong>
         </Typography>
         <Chip label={`Zoom: ${zoomLevel}`} size="small" variant="outlined" color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />
+        {drawMode !== 'none' && (
+          <Chip
+            label={`Mode: ${drawMode.toUpperCase()}`}
+            size="small"
+            color="secondary"
+            sx={{ height: 20, fontSize: '0.7rem' }}
+          />
+        )}
       </Paper>
     </Box>
   );
