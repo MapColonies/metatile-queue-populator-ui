@@ -1,2 +1,14 @@
 packages:
   - 'apps/*'
+
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - 'protobufjs'
+  - 'unrs-resolver'
+  - '@swc/core'
+  - 'esbuild'
+
+allowBuilds:
+  '@scarf/scarf': false
+  protobufjs: false
+  unrs-resolver: false
