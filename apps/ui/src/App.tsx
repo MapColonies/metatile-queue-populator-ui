@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ThemeProvider, CssBaseline, Box, Tabs, Tab, Paper, Container, Typography, Button } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box, Tabs, Tab, Paper, Button } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import HistoryIcon from '@mui/icons-material/History';
@@ -11,6 +11,7 @@ import { AreaForm } from './components/AreaForm.tsx';
 import { TileListForm } from './components/TileListForm.tsx';
 import { QueueDashboardView } from './views/QueueDashboardView.tsx';
 import { HistoryView, HistoryRecord } from './views/HistoryView.tsx';
+import { PresetsView, AreaPreset } from './views/PresetsView.tsx';
 import { SelectedArea } from './types/geometry.ts';
 
 interface TabPanelProps {
@@ -56,6 +57,16 @@ export const App: React.FC = () => {
       }
     } else {
       setCreatorMode('list');
+    }
+    setCurrentTab(0); // Switch to Map Creator Tab
+  };
+
+  const handleLoadPreset = (preset: AreaPreset) => {
+    setCreatorMode('area');
+    if (Array.isArray(preset.area)) {
+      setSelectedArea({ type: 'bbox', bbox: preset.area as [number, number, number, number] });
+    } else {
+      setSelectedArea({ type: 'geojson', geojson: preset.area });
     }
     setCurrentTab(0); // Switch to Map Creator Tab
   };
@@ -142,16 +153,7 @@ export const App: React.FC = () => {
           </CustomTabPanel>
 
           <CustomTabPanel value={currentTab} index={3}>
-            <Container maxWidth="lg" sx={{ py: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-                Saved Presets
-              </Typography>
-              <Paper sx={{ p: 4, border: '1px dashed #2c3842', textAlign: 'center' }}>
-                <Typography color="text.secondary">
-                  [Area & Zoom Configuration Presets - Ticket 14]
-                </Typography>
-              </Paper>
-            </Container>
+            <PresetsView onLoadPreset={handleLoadPreset} />
           </CustomTabPanel>
         </Box>
       </Box>
