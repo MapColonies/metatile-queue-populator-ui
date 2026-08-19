@@ -30,6 +30,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ContentPasteIcon from '@mui/icons-material/ContentPaste';
 import SendIcon from '@mui/icons-material/Send';
 import GridViewIcon from '@mui/icons-material/GridView';
+import { appConfig } from '../config/appConfig.ts';
 import axios from 'axios';
 
 export interface TileItem {
@@ -42,7 +43,7 @@ export interface TileItem {
 
 export const TileListForm: React.FC = () => {
   const [tiles, setTiles] = useState<TileItem[]>([
-    { id: '1', z: 10, x: 500, y: 300, metatile: 8 },
+    { id: '1', z: 10, x: 500, y: 300, metatile: appConfig.defaultMetatile },
   ]);
   const [force, setForce] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -57,7 +58,7 @@ export const TileListForm: React.FC = () => {
   const handleAddRow = () => {
     setTiles((prev) => [
       ...prev,
-      { id: String(Date.now()), z: 10, x: 0, y: 0, metatile: 8 },
+      { id: String(Date.now()), z: 10, x: 0, y: 0, metatile: appConfig.defaultMetatile },
     ]);
   };
 
@@ -95,7 +96,7 @@ export const TileListForm: React.FC = () => {
           z: Number(item.z) || 0,
           x: Number(item.x) || 0,
           y: Number(item.y) || 0,
-          metatile: Number(item.metatile) || 8,
+          metatile: Number(item.metatile) || appConfig.defaultMetatile,
         }));
       } else {
         // CSV or whitespace format (e.g. z,x,y,metatile or z/x/y)
@@ -114,10 +115,10 @@ export const TileListForm: React.FC = () => {
             const z = parseInt(parts[0], 10);
             const x = parseInt(parts[1], 10);
             const y = parseInt(parts[2], 10);
-            const metatile = parts[3] ? parseInt(parts[3], 10) : 8;
+            const metatile = parts[3] ? parseInt(parts[3], 10) : appConfig.defaultMetatile;
 
             if (isNaN(z) || isNaN(x) || isNaN(y)) return null;
-            return { id: `${Date.now()}-${index}`, z, x, y, metatile: isNaN(metatile) ? 8 : metatile };
+            return { id: `${Date.now()}-${index}`, z, x, y, metatile: isNaN(metatile) ? appConfig.defaultMetatile : metatile };
           })
           .filter((t): t is TileItem => t !== null);
       }
