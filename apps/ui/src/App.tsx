@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ThemeProvider, CssBaseline, Box, Tabs, Tab, Paper, Container, Typography } from '@mui/material';
+import { ThemeProvider, CssBaseline, Box, Tabs, Tab, Paper, Container, Typography, Button } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import HistoryIcon from '@mui/icons-material/History';
@@ -8,6 +8,7 @@ import { darkTheme } from './theme/index.ts';
 import { Header } from './components/Header.tsx';
 import { MapComponent } from './components/MapComponent.tsx';
 import { AreaForm } from './components/AreaForm.tsx';
+import { TileListForm } from './components/TileListForm.tsx';
 import { SelectedArea } from './types/geometry.ts';
 
 interface TabPanelProps {
@@ -35,6 +36,7 @@ function CustomTabPanel(props: TabPanelProps) {
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
+  const [creatorMode, setCreatorMode] = useState<'area' | 'list'>('area');
   const [selectedArea, setSelectedArea] = useState<SelectedArea>(null);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -69,8 +71,47 @@ export const App: React.FC = () => {
           <CustomTabPanel value={currentTab} index={0}>
             <Box sx={{ flexGrow: 1, width: '100%', height: '100%', position: 'relative', display: 'flex' }}>
               <MapComponent onAreaSelected={setSelectedArea} />
-              <Box sx={{ position: 'absolute', top: 16, right: 70, zIndex: 10 }}>
-                <AreaForm selectedArea={selectedArea} />
+              
+              {/* Floating Form Overlay with Mode Toggle */}
+              <Box sx={{ position: 'absolute', top: 16, right: 70, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Paper
+                  elevation={3}
+                  sx={{
+                    p: 0.5,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    bgcolor: 'rgba(26, 34, 40, 0.95)',
+                    backdropFilter: 'blur(6px)',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 2,
+                  }}
+                >
+                  <Button
+                    size="small"
+                    variant={creatorMode === 'area' ? 'contained' : 'text'}
+                    color="primary"
+                    onClick={() => setCreatorMode('area')}
+                    sx={{ px: 2 }}
+                  >
+                    Area Mode
+                  </Button>
+                  <Button
+                    size="small"
+                    variant={creatorMode === 'list' ? 'contained' : 'text'}
+                    color="primary"
+                    onClick={() => setCreatorMode('list')}
+                    sx={{ px: 2 }}
+                  >
+                    Tile List Mode
+                  </Button>
+                </Paper>
+
+                {creatorMode === 'area' ? (
+                  <AreaForm selectedArea={selectedArea} />
+                ) : (
+                  <TileListForm />
+                )}
               </Box>
             </Box>
           </CustomTabPanel>
