@@ -1,0 +1,125 @@
+import React, { useState } from 'react';
+import { ThemeProvider, CssBaseline, Box, Tabs, Tab, Paper, Container, Typography } from '@mui/material';
+import MapIcon from '@mui/icons-material/Map';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import HistoryIcon from '@mui/icons-material/History';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
+import { darkTheme } from './theme/index.ts';
+import { Header } from './components/Header.tsx';
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function CustomTabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      style={{ flexGrow: 1, display: value === index ? 'flex' : 'none', flexDirection: 'column' }}
+      {...other}
+    >
+      {value === index && children}
+    </div>
+  );
+}
+
+export const App: React.FC = () => {
+  const [currentTab, setCurrentTab] = useState(0);
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+  };
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+        <Header />
+        
+        {/* Navigation Tabs */}
+        <Paper square elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab icon={<MapIcon fontSize="small" />} iconPosition="start" label="Queue Creator" />
+            <Tab icon={<DashboardIcon fontSize="small" />} iconPosition="start" label="Queue Status" />
+            <Tab icon={<HistoryIcon fontSize="small" />} iconPosition="start" label="Submission History" />
+            <Tab icon={<BookmarkIcon fontSize="small" />} iconPosition="start" label="Presets" />
+          </Tabs>
+        </Paper>
+
+        {/* Tab Content Areas */}
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <CustomTabPanel value={currentTab} index={0}>
+            <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                Tile Queue Creator
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Select an area using the map, upload spatial files, or provide custom tile coordinate lists to populate the metatile queue.
+              </Typography>
+              <Paper sx={{ p: 4, flexGrow: 1, border: '1px dashed #2c3842', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Typography color="text.secondary">
+                  [OpenLayers Map & Area Form Container - Ticket 04 / 05 / 06]
+                </Typography>
+              </Paper>
+            </Box>
+          </CustomTabPanel>
+
+          <CustomTabPanel value={currentTab} index={1}>
+            <Container maxWidth="lg" sx={{ py: 3 }}>
+              <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+                Queue Monitoring & Health
+              </Typography>
+              <Paper sx={{ p: 4, border: '1px dashed #2c3842', textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  [pg-boss / Postgres Real-time Queue Metrics Dashboard - Ticket 12]
+                </Typography>
+              </Paper>
+            </Container>
+          </CustomTabPanel>
+
+          <CustomTabPanel value={currentTab} index={2}>
+            <Container maxWidth="lg" sx={{ py: 3 }}>
+              <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+                Job Submission History
+              </Typography>
+              <Paper sx={{ p: 4, border: '1px dashed #2c3842', textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  [Submission Audit Log & 1-Click Replay - Ticket 13]
+                </Typography>
+              </Paper>
+            </Container>
+          </CustomTabPanel>
+
+          <CustomTabPanel value={currentTab} index={3}>
+            <Container maxWidth="lg" sx={{ py: 3 }}>
+              <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+                Saved Presets
+              </Typography>
+              <Paper sx={{ p: 4, border: '1px dashed #2c3842', textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  [Area & Zoom Configuration Presets - Ticket 14]
+                </Typography>
+              </Paper>
+            </Container>
+          </CustomTabPanel>
+        </Box>
+      </Box>
+    </ThemeProvider>
+  );
+};
+
+export default App;

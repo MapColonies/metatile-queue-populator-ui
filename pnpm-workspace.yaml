@@ -10,5 +10,6 @@ onlyBuiltDependencies:
 
 allowBuilds:
   '@scarf/scarf': false
+  esbuild: false
   protobufjs: false
   unrs-resolver: false
