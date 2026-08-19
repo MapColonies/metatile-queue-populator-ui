@@ -1,0 +1,21 @@
+{
+  "name": "metatile-queue-populator-ui-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo for Metatile Queue Populator UI and BFF Server",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:server": "pnpm --filter @metatile-queue-populator-ui/server start:dev",
+    "dev:ui": "pnpm --filter @metatile-queue-populator-ui/ui dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "pnpm@11.22.0"
+}
