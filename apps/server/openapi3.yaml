@@ -122,7 +122,7 @@ components:
             type: integer
           metatile:
             type: integer
-            default: 1
+            default: 8
     BaseAreaRequest:
       type: object
       required:

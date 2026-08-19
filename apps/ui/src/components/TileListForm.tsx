@@ -42,7 +42,7 @@ export interface TileItem {
 
 export const TileListForm: React.FC = () => {
   const [tiles, setTiles] = useState<TileItem[]>([
-    { id: '1', z: 10, x: 500, y: 300, metatile: 1 },
+    { id: '1', z: 10, x: 500, y: 300, metatile: 8 },
   ]);
   const [force, setForce] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -57,7 +57,7 @@ export const TileListForm: React.FC = () => {
   const handleAddRow = () => {
     setTiles((prev) => [
       ...prev,
-      { id: String(Date.now()), z: 10, x: 0, y: 0, metatile: 1 },
+      { id: String(Date.now()), z: 10, x: 0, y: 0, metatile: 8 },
     ]);
   };
 
@@ -95,7 +95,7 @@ export const TileListForm: React.FC = () => {
           z: Number(item.z) || 0,
           x: Number(item.x) || 0,
           y: Number(item.y) || 0,
-          metatile: Number(item.metatile) || 1,
+          metatile: Number(item.metatile) || 8,
         }));
       } else {
         // CSV or whitespace format (e.g. z,x,y,metatile or z/x/y)
@@ -114,10 +114,10 @@ export const TileListForm: React.FC = () => {
             const z = parseInt(parts[0], 10);
             const x = parseInt(parts[1], 10);
             const y = parseInt(parts[2], 10);
-            const metatile = parts[3] ? parseInt(parts[3], 10) : 1;
+            const metatile = parts[3] ? parseInt(parts[3], 10) : 8;
 
             if (isNaN(z) || isNaN(x) || isNaN(y)) return null;
-            return { id: `${Date.now()}-${index}`, z, x, y, metatile: isNaN(metatile) ? 1 : metatile };
+            return { id: `${Date.now()}-${index}`, z, x, y, metatile: isNaN(metatile) ? 8 : metatile };
           })
           .filter((t): t is TileItem => t !== null);
       }
