@@ -1,8 +1,8 @@
-import { Logger } from '@map-colonies/js-logger';
+import type { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import httpStatus from 'http-status-codes';
 import { SERVICES } from '../../common/constants';
-import { ConfigType } from '../../common/config';
+import type { ConfigType } from '../../common/config';
 import { HttpError } from '../../common/errors';
 
 export interface PostTilesAreaResponse {
@@ -21,7 +21,7 @@ export class PopulatorClient {
     @inject(SERVICES.CONFIG) private readonly config: ConfigType,
     @inject(SERVICES.LOGGER) private readonly logger: Logger
   ) {
-    this.populatorUrl = this.config.get<string>('populator.url');
+    this.populatorUrl = (this.config.get as any)('populator.url') ?? 'http://localhost:8081';
   }
 
   public async postTilesArea(body: unknown, force?: boolean): Promise<PostTilesAreaResponse> {

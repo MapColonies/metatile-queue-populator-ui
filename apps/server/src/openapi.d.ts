@@ -4,35 +4,51 @@
 
 import type { TypedRequestHandlers as ImportedTypedRequestHandlers } from '@map-colonies/openapi-express-types';
 export type paths = {
-  '/anotherResource': {
+  '/tiles/area': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** gets the resource */
-    get: operations['getAnotherResource'];
+    get?: never;
     put?: never;
-    post?: never;
+    /** Add all metatiles in given area to queue */
+    post: operations['postTilesByArea'];
     delete?: never;
     options?: never;
     head?: never;
     patch?: never;
     trace?: never;
   };
-  '/resourceName': {
+  '/tiles/estimate': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** gets the resource */
-    get: operations['getResourceName'];
+    get?: never;
     put?: never;
-    /** creates a new record of type resource */
-    post: operations['createResource'];
+    /** Estimate tile and metatile counts for a given area and zoom range */
+    post: operations['estimateTiles'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/tiles/list': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add specific metatiles to queue */
+    post: operations['postTilesList'];
     delete?: never;
     options?: never;
     head?: never;
@@ -43,21 +59,61 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
   schemas: {
-    error: {
+    Error: {
       message: string;
     };
-    resource: {
-      /** Format: int64 */
-      id: number;
-      name: string;
-      description: string;
+    TilesListRequest: {
+      x: number;
+      y: number;
+      z: number;
+      /** @default 8 */
+      metatile: number;
+    }[];
+    BaseAreaRequest: {
+      minZoom: number;
+      maxZoom: number;
+      /** @default 0 */
+      priority: number;
     };
-    anotherResource: {
-      kind: string;
-      isAlive: boolean;
+    BboxTilesRequest: components['schemas']['BaseAreaRequest'] & {
+      area: number[];
+    };
+    GeometryTilesRequest: components['schemas']['BaseAreaRequest'] & {
+      area: {
+        type: string;
+      };
+    };
+    MultiAreaTilesRequest: (components['schemas']['BboxTilesRequest'] | components['schemas']['GeometryTilesRequest'])[];
+  };
+  responses: {
+    /** @description Bad request */
+    BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['Error'];
+      };
+    };
+    /** @description Conflict */
+    Conflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['Error'];
+      };
+    };
+    /** @description Unexpected Error */
+    UnexpectedError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['Error'];
+      };
     };
   };
-  responses: never;
   parameters: never;
   requestBodies: never;
   headers: never;
@@ -65,14 +121,21 @@ export type components = {
 };
 export type $defs = Record<string, never>;
 export interface operations {
-  getAnotherResource: {
+  postTilesByArea: {
     parameters: {
-      query?: never;
+      query?: {
+        force?: boolean;
+      };
       header?: never;
       path?: never;
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json':
+          components['schemas']['BboxTilesRequest'] | components['schemas']['GeometryTilesRequest'] | components['schemas']['MultiAreaTilesRequest'];
+      };
+    };
     responses: {
       /** @description OK */
       200: {
@@ -80,50 +143,17 @@ export interface operations {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['anotherResource'];
+          'application/json': {
+            message?: string;
+          };
         };
       };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['error'];
-        };
-      };
+      400: components['responses']['BadRequest'];
+      409: components['responses']['Conflict'];
+      '5XX': components['responses']['UnexpectedError'];
     };
   };
-  getResourceName: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['resource'];
-        };
-      };
-      /** @description Bad Request */
-      400: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['error'];
-        };
-      };
-    };
-  };
-  createResource: {
+  estimateTiles: {
     parameters: {
       query?: never;
       header?: never;
@@ -132,28 +162,66 @@ export interface operations {
     };
     requestBody: {
       content: {
-        'application/json': components['schemas']['resource'];
+        'application/json': {
+          minZoom: number;
+          maxZoom: number;
+          /** @default 8 */
+          metatile?: number;
+          area: number[] | Record<string, never>;
+        };
       };
     };
     responses: {
-      /** @description created */
-      201: {
+      /** @description OK */
+      200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['resource'];
+          'application/json': {
+            totalMetatiles: number;
+            totalTiles: number;
+            metatileSize: number;
+            breakdown: {
+              zoom?: number;
+              metatiles?: number;
+              tiles?: number;
+            }[];
+          };
         };
       };
-      /** @description Bad Request */
-      400: {
+      400: components['responses']['BadRequest'];
+      '5XX': components['responses']['UnexpectedError'];
+    };
+  };
+  postTilesList: {
+    parameters: {
+      query?: {
+        force?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TilesListRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
         headers: {
           [name: string]: unknown;
         };
         content: {
-          'application/json': components['schemas']['error'];
+          'application/json': {
+            message?: string;
+          };
         };
       };
+      400: components['responses']['BadRequest'];
+      '5XX': components['responses']['UnexpectedError'];
     };
   };
 }

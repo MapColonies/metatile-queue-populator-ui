@@ -1,10 +1,10 @@
-import { Logger } from '@map-colonies/js-logger';
+import type { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { BoundingBox, lonLatZoomToTile, tileToBoundingBox, Tile } from '@map-colonies/tile-calc';
 import * as turf from '@turf/turf';
-import { Feature, Polygon, MultiPolygon } from 'geojson';
+import type { Feature, Polygon, MultiPolygon } from 'geojson';
 import { SERVICES } from '../../common/constants';
-import { ConfigType } from '../../common/config';
+import type { ConfigType } from '../../common/config';
 
 export interface ZoomEstimation {
   zoom: number;
@@ -35,7 +35,7 @@ export class TileEstimationService {
     @inject(SERVICES.LOGGER) private readonly logger: Logger
   ) {
     try {
-      this.defaultMetatile = this.config.get<number>('app.metatileSize');
+      this.defaultMetatile = (this.config.get as any)('app.metatileSize') ?? 8;
     } catch {
       this.defaultMetatile = 8;
     }
