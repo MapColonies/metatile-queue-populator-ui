@@ -70,7 +70,7 @@ export const App: React.FC = () => {
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <CustomTabPanel value={currentTab} index={0}>
             <Box sx={{ flexGrow: 1, width: '100%', height: '100%', position: 'relative', display: 'flex' }}>
-              <MapComponent onAreaSelected={setSelectedArea} />
+              <MapComponent externalArea={selectedArea} onAreaSelected={setSelectedArea} />
               
               {/* Floating Form Overlay with Mode Toggle */}
               <Box sx={{ position: 'absolute', top: 16, right: 70, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -108,7 +108,7 @@ export const App: React.FC = () => {
                 </Paper>
 
                 {creatorMode === 'area' ? (
-                  <AreaForm selectedArea={selectedArea} />
+                  <AreaForm selectedArea={selectedArea} onAreaChange={setSelectedArea} />
                 ) : (
                   <TileListForm />
                 )}

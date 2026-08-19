@@ -19,13 +19,15 @@ import SendIcon from '@mui/icons-material/Send';
 import LayersIcon from '@mui/icons-material/Layers';
 import { SelectedArea } from '../types/geometry.ts';
 import { TileEstimationWidget } from './TileEstimationWidget.tsx';
+import { SpatialDropzone } from './SpatialDropzone.tsx';
 import axios from 'axios';
 
 interface AreaFormProps {
   selectedArea: SelectedArea;
+  onAreaChange: (area: SelectedArea) => void;
 }
 
-export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea }) => {
+export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }) => {
   const [zoomRange, setZoomRange] = useState<[number, number]>([0, 10]);
   const [priority, setPriority] = useState<number>(0);
   const [force, setForce] = useState<boolean>(false);
@@ -110,6 +112,9 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea }) => {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         Calculate and queue metatiles within the selected geographical boundary.
       </Typography>
+
+      {/* Spatial File Dropzone */}
+      <SpatialDropzone onGeometryLoaded={onAreaChange} />
 
       <Divider sx={{ mb: 2 }} />
 

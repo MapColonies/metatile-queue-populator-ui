@@ -24,6 +24,7 @@ import { DrawMode, SelectedArea } from '../types/geometry.ts';
 import 'ol/ol.css';
 
 interface MapComponentProps {
+  externalArea?: SelectedArea;
   onAreaSelected?: (area: SelectedArea) => void;
   onMapReady?: (map: Map) => void;
 }
@@ -38,7 +39,7 @@ const vectorStyle = new Style({
   }),
 });
 
-export const MapComponent: React.FC<MapComponentProps> = ({ onAreaSelected, onMapReady }) => {
+export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onAreaSelected, onMapReady }) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource>(new VectorSource());
@@ -48,6 +49,64 @@ export const MapComponent: React.FC<MapComponentProps> = ({ onAreaSelected, onMa
   const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.0000', lat: '0.0000' });
   const [zoomLevel, setZoomLevel] = useState<number>(7);
   const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
+
+  // Sync external loaded area (e.g. from File Dropzone or Preset)
+  useEffect(() => {
+    if (!externalArea || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const source = vectorSourceRef.current;
+    source.clear();
+
+    const geojsonFormat = new GeoJSON();
+    let features: any[] = [];
+
+    if (externalArea.type === 'geojson') {
+      features = geojsonFormat.readFeatures(externalArea.geojson, {
+        featureProjection: 'EPSG:3857',
+        dataProjection: 'EPSG:4326',
+      });
+    } else if (externalArea.type === 'bbox') {
+      const [west, south, east, north] = externalArea.bbox;
+      const polyFeature = geojsonFormat.readFeature(
+        {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [west, south],
+                [east, south],
+                [east, north],
+                [west, north],
+                [west, south],
+              ],
+            ],
+          },
+        },
+        {
+          featureProjection: 'EPSG:3857',
+          dataProjection: 'EPSG:4326',
+        }
+      );
+      features = [polyFeature];
+    }
+
+    if (features.length > 0) {
+      source.addFeatures(features);
+      setHasDrawnGeometry(true);
+
+      const extent = source.getExtent();
+      if (extent && !extent.some(isNaN)) {
+        map.getView().fit(extent, {
+          padding: [50, 50, 50, 50],
+          maxZoom: 16,
+          duration: 500,
+        });
+      }
+    }
+  }, [externalArea]);
 
   const updateDrawnArea = useCallback(() => {
     const features = vectorSourceRef.current.getFeatures();
