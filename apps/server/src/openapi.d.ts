@@ -89,6 +89,24 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get submission history */
+    get: operations['getHistory'];
+    put?: never;
+    /** Record new job submission in history */
+    post: operations['recordHistory'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tiles/list': {
     parameters: {
       query?: never;
@@ -320,6 +338,59 @@ export interface operations {
     responses: {
       /** @description OK */
       200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  getHistory: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  recordHistory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @enum {string} */
+          type: 'area' | 'list';
+          parameters: Record<string, never>;
+          /** @enum {string} */
+          status: 'SUCCESS' | 'FAILED';
+          responseMessage?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
         headers: {
           [name: string]: unknown;
         };

@@ -168,13 +168,30 @@ export const TileListForm: React.FC = () => {
         params: { force },
       });
 
+      // Record in Submission History
+      await axios.post('/api/history', {
+        type: 'list',
+        parameters: { tiles: payload },
+        status: 'SUCCESS',
+        responseMessage: response.data.message || 'Queued successfully',
+      }).catch(() => null);
+
       setToast({
         open: true,
-        message: response.data.message || 'Tile list successfully queued!',
+        message: response.data.message || `Successfully queued ${tiles.length} metatiles!`,
         severity: 'success',
       });
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to submit tile list';
+
+      // Record failure in history
+      await axios.post('/api/history', {
+        type: 'list',
+        parameters: { tiles: tiles.map(t => ({ z: t.z, x: t.x, y: t.y, metatile: t.metatile })) },
+        status: 'FAILED',
+        responseMessage: errorMsg,
+      }).catch(() => null);
+
       setToast({
         open: true,
         message: errorMsg,

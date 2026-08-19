@@ -13,6 +13,7 @@ import { SERVICES } from '@common/constants';
 import { TILES_ROUTER_SYMBOL } from './tiles/routes/tilesRouter';
 import { SPATIAL_ROUTER_SYMBOL } from './spatial/routes/spatialRouter';
 import { QUEUE_ROUTER_SYMBOL } from './queue/routes/queueRouter';
+import { HISTORY_ROUTER_SYMBOL } from './history/routes/historyRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -24,7 +25,8 @@ export class ServerBuilder {
     @inject(SERVICES.METRICS) private readonly metricsRegistry: Registry,
     @inject(TILES_ROUTER_SYMBOL) private readonly tilesRouter: Router,
     @inject(SPATIAL_ROUTER_SYMBOL) private readonly spatialRouter: Router,
-    @inject(QUEUE_ROUTER_SYMBOL) private readonly queueRouter: Router
+    @inject(QUEUE_ROUTER_SYMBOL) private readonly queueRouter: Router,
+    @inject(HISTORY_ROUTER_SYMBOL) private readonly historyRouter: Router
   ) {
     this.serverInstance = express();
   }
@@ -50,6 +52,7 @@ export class ServerBuilder {
     this.serverInstance.use('/tiles', this.tilesRouter);
     this.serverInstance.use('/spatial', this.spatialRouter);
     this.serverInstance.use('/queue', this.queueRouter);
+    this.serverInstance.use('/history', this.historyRouter);
     this.buildDocsRoutes();
   }
 

@@ -203,6 +203,60 @@ paths:
             application/json:
               schema:
                 type: object
+  /history:
+    get:
+      operationId: getHistory
+      tags:
+        - history
+      summary: Get submission history
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      operationId: recordHistory
+      tags:
+        - history
+      summary: Record new job submission in history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - parameters
+                - status
+              properties:
+                type:
+                  type: string
+                  enum: [area, list]
+                parameters:
+                  type: object
+                status:
+                  type: string
+                  enum: [SUCCESS, FAILED]
+                responseMessage:
+                  type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
   /tiles/list:
     post:
       operationId: postTilesList

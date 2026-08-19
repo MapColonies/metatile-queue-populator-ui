@@ -71,6 +71,14 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
         params: { force },
       });
 
+      // Record in Submission History
+      await axios.post('/api/history', {
+        type: 'area',
+        parameters: payload,
+        status: 'SUCCESS',
+        responseMessage: response.data.message || 'Queued successfully',
+      }).catch(() => null);
+
       setToast({
         open: true,
         message: response.data.message || 'Area tiles successfully added to queue!',
@@ -78,6 +86,15 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
       });
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to submit area job';
+      
+      // Record failure in history
+      await axios.post('/api/history', {
+        type: 'area',
+        parameters: { minZoom: zoomRange[0], maxZoom: zoomRange[1], area: selectedArea.type === 'bbox' ? selectedArea.bbox : selectedArea.geojson },
+        status: 'FAILED',
+        responseMessage: errorMsg,
+      }).catch(() => null);
+
       setToast({
         open: true,
         message: errorMsg,

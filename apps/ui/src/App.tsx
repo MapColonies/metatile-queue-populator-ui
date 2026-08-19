@@ -10,6 +10,7 @@ import { MapComponent } from './components/MapComponent.tsx';
 import { AreaForm } from './components/AreaForm.tsx';
 import { TileListForm } from './components/TileListForm.tsx';
 import { QueueDashboardView } from './views/QueueDashboardView.tsx';
+import { HistoryView, HistoryRecord } from './views/HistoryView.tsx';
 import { SelectedArea } from './types/geometry.ts';
 
 interface TabPanelProps {
@@ -27,7 +28,7 @@ function CustomTabPanel(props: TabPanelProps) {
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
-      style={{ flexGrow: 1, display: value === index ? 'flex' : 'none', flexDirection: 'column' }}
+      style={{ height: '100%', display: value === index ? 'flex' : 'none', flexDirection: 'column' }}
       {...other}
     >
       {value === index && children}
@@ -42,6 +43,21 @@ export const App: React.FC = () => {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
+  };
+
+  const handleReplayJob = (record: HistoryRecord) => {
+    if (record.type === 'area') {
+      setCreatorMode('area');
+      const params = record.parameters;
+      if (Array.isArray(params.area)) {
+        setSelectedArea({ type: 'bbox', bbox: params.area as [number, number, number, number] });
+      } else if (params.area) {
+        setSelectedArea({ type: 'geojson', geojson: params.area });
+      }
+    } else {
+      setCreatorMode('list');
+    }
+    setCurrentTab(0); // Switch to Map Creator Tab
   };
 
   return (
@@ -122,16 +138,7 @@ export const App: React.FC = () => {
           </CustomTabPanel>
 
           <CustomTabPanel value={currentTab} index={2}>
-            <Container maxWidth="lg" sx={{ py: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-                Job Submission History
-              </Typography>
-              <Paper sx={{ p: 4, border: '1px dashed #2c3842', textAlign: 'center' }}>
-                <Typography color="text.secondary">
-                  [Submission Audit Log & 1-Click Replay - Ticket 13]
-                </Typography>
-              </Paper>
-            </Container>
+            <HistoryView onReplayJob={handleReplayJob} />
           </CustomTabPanel>
 
           <CustomTabPanel value={currentTab} index={3}>
