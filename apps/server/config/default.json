@@ -37,15 +37,15 @@
     "url": "https://render-buildings-mqp-route-vector-dev.apps.j1lk3njp.eastus.aroapp.io/"
   },
   "app": {
-    "projectName": "default",
+    "projectName": "buildings",
     "tilesBatchSize": 10000,
     "metatileSize": 8
   },
   "db": {
-    "host": "localhost",
+    "host": "postgres-prod.mapcolonies.net",
     "port": 5432,
     "username": "postgres",
-    "password": "postgres",
+    "password": "Libot4allnonprod",
     "schema": "pgboss",
     "createSchema": false,
     "migrate": false,
@@ -55,6 +55,6 @@
       "key": "",
       "cert": ""
     },
-    "database": "postgres"
+    "database": "vector-rendering-buildings"
   }
 }

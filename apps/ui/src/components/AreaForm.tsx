@@ -34,6 +34,9 @@ import axios from 'axios';
 interface Preset {
   id: string;
   name: string;
+  category?: 'Continent' | 'Subregion' | 'Country' | 'Custom';
+  continent?: string;
+  subregion?: string;
   description?: string;
   minZoom: number;
   maxZoom: number;
@@ -216,25 +219,93 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
       {/* Preset Selector */}
       {presets.length > 0 && (
         <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <InputLabel id="preset-select-label">Load Saved Area Preset</InputLabel>
+          <InputLabel id="preset-select-label">Load Preset (Continent / Sub-region / Country)</InputLabel>
           <Select
             labelId="preset-select-label"
-            label="Load Saved Area Preset"
+            label="Load Preset (Continent / Sub-region / Country)"
             value={selectedPresetId}
             onChange={(e) => handlePresetSelect(e.target.value as string)}
           >
-            {presets.map((preset) => (
-              <MenuItem key={preset.id} value={preset.id}>
-                <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    {preset.name}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {preset.description || `Z${preset.minZoom}-Z${preset.maxZoom}`}
-                  </Typography>
-                </Box>
-              </MenuItem>
-            ))}
+            {/* Group: Continents */}
+            <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
+              ── CONTINENTS ──
+            </MenuItem>
+            {presets
+              .filter((p) => p.category === 'Continent' || p.id.startsWith('continent-'))
+              .map((preset) => (
+                <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      🌍 {preset.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Z{preset.minZoom}-Z{preset.maxZoom} • Continent extent
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+
+            {/* Group: Sub-regions */}
+            <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
+              ── SUB-REGIONS ──
+            </MenuItem>
+            {presets
+              .filter((p) => p.category === 'Subregion' || p.id.startsWith('subregion-'))
+              .map((preset) => (
+                <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      🗺️ {preset.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Z{preset.minZoom}-Z{preset.maxZoom} • {preset.continent || 'Region'}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+
+            {/* Group: Countries */}
+            <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
+              ── COUNTRIES ──
+            </MenuItem>
+            {presets
+              .filter((p) => p.category === 'Country' || p.id.startsWith('country-') || p.id.startsWith('default-'))
+              .slice(0, 100)
+              .map((preset) => (
+                <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      🚩 {preset.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Z{preset.minZoom}-Z{preset.maxZoom} • {preset.subregion || preset.continent || 'Country'}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+
+            {/* Group: Custom Saved Presets */}
+            {presets.some((p) => p.category === 'Custom' || (!p.id.startsWith('continent-') && !p.id.startsWith('subregion-') && !p.id.startsWith('country-') && !p.id.startsWith('default-'))) && (
+              <>
+                <MenuItem disabled sx={{ fontWeight: 700, opacity: 1, color: 'primary.main', fontSize: '0.75rem' }}>
+                  ── CUSTOM BOOKMARKS ──
+                </MenuItem>
+                {presets
+                  .filter((p) => p.category === 'Custom' || (!p.id.startsWith('continent-') && !p.id.startsWith('subregion-') && !p.id.startsWith('country-') && !p.id.startsWith('default-')))
+                  .map((preset) => (
+                    <MenuItem key={preset.id} value={preset.id} sx={{ pl: 3 }}>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          ⭐ {preset.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Z{preset.minZoom}-Z{preset.maxZoom}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+              </>
+            )}
           </Select>
         </FormControl>
       )}

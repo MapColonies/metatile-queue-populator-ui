@@ -1,11 +1,16 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { inject, injectable, singleton } from 'tsyringe';
 import { randomUUID } from 'crypto';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 import { SERVICES } from '../../common/constants';
 
 export interface AreaPreset {
   id: string;
   name: string;
+  category?: 'Continent' | 'Subregion' | 'Country' | 'Custom';
+  continent?: string;
+  subregion?: string;
   description?: string;
   minZoom: number;
   maxZoom: number;
@@ -17,40 +22,55 @@ export interface AreaPreset {
 @singleton()
 @injectable()
 export class PresetService {
-  private presets: AreaPreset[] = [
-    {
-      id: 'default-israel',
-      name: 'Israel Region (Default)',
-      description: 'Standard operational bounding box covering the central region',
-      minZoom: 0,
-      maxZoom: 10,
-      priority: 1,
-      area: [34.17, 29.45, 35.9, 33.35],
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'default-tel-aviv',
-      name: 'Tel Aviv Metropolitan',
-      description: 'High-density urban bounds for zoom levels 10-18',
-      minZoom: 10,
-      maxZoom: 16,
-      priority: 2,
-      area: [34.74, 32.02, 34.86, 32.14],
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 'default-jerusalem',
-      name: 'Jerusalem District',
-      description: 'Municipal boundary area for zoom levels 8-15',
-      minZoom: 8,
-      maxZoom: 15,
-      priority: 2,
-      area: [35.15, 31.72, 35.26, 31.83],
-      createdAt: new Date().toISOString(),
-    },
-  ];
+  private presets: AreaPreset[] = [];
 
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
+  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {
+    this.initializeDefaultPresets();
+  }
+
+  private initializeDefaultPresets(): void {
+    // 1. Check for bundled global presets file
+    const possiblePaths = [
+      resolve(__dirname, '../../../../assets/globe_presets.json'),
+      resolve(__dirname, '../../../assets/globe_presets.json'),
+      resolve(process.cwd(), 'assets/globe_presets.json'),
+      resolve(process.cwd(), 'dist/assets/globe_presets.json'),
+      '/home/danielh3/repos/metatile-queue-poplator-ui/apps/server/assets/globe_presets.json',
+    ];
+
+    let loaded = false;
+    for (const p of possiblePaths) {
+      if (existsSync(p)) {
+        try {
+          const raw = readFileSync(p, 'utf8');
+          this.presets = JSON.parse(raw);
+          this.logger.info({ msg: 'Loaded hierarchical global presets', count: this.presets.length, path: p });
+          loaded = true;
+          break;
+        } catch (err: any) {
+          this.logger.warn({ msg: 'Failed to read globe presets from path', path: p, error: err.message });
+        }
+      }
+    }
+
+    if (!loaded || this.presets.length === 0) {
+      this.presets = [
+        {
+          id: 'default-israel',
+          name: 'Israel Region',
+          category: 'Country',
+          continent: 'Asia',
+          subregion: 'Western Asia',
+          description: 'Standard operational bounding box covering the central region',
+          minZoom: 0,
+          maxZoom: 10,
+          priority: 1,
+          area: [34.17, 29.45, 35.9, 33.35],
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+  }
 
   public getPresets(): AreaPreset[] {
     return this.presets;

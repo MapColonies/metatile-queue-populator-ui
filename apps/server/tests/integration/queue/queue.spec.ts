@@ -3,17 +3,39 @@ import supertest from 'supertest';
 import { Application } from 'express';
 import { getApp } from '../../../src/app';
 import { initConfig } from '../../../src/common/config';
+import { QueueStatusService } from '../../../src/queue/models/queueStatusService';
 
 describe('Queue Routes Integration', () => {
   let app: Application;
+  let queueServiceMock: {
+    getQueueStatus: ReturnType<typeof vi.fn>;
+  };
 
   beforeAll(async () => {
     await initConfig(true);
   });
 
   beforeEach(async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true });
-    const [appInstance] = await getApp({ useChild: true });
+    queueServiceMock = {
+      getQueueStatus: vi.fn().mockResolvedValue({
+        status: 'UP',
+        timestamp: new Date().toISOString(),
+        populatorServiceUrl: 'http://localhost:8081',
+        dbConnected: true,
+        queues: [{ queueName: 'tiles-buildings', total: 24, active: 0, queued: 24, failed: 0, completed: 0 }],
+        summary: { totalJobs: 24, activeJobs: 0, queuedJobs: 24, failedJobs: 0, completedJobs: 0 },
+      }),
+    };
+
+    const [appInstance] = await getApp({
+      override: [
+        {
+          token: QueueStatusService,
+          provider: { useValue: queueServiceMock },
+        },
+      ],
+      useChild: true,
+    });
     app = appInstance;
   });
 

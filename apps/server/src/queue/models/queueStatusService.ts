@@ -79,9 +79,10 @@ export class QueueStatusService {
     }
 
     let dbConnected = false;
-    const requestQueueName = `tile-request-queue-${this.projectName}`;
-    const tilesQueueName = `tiles-queue-${this.projectName}`;
-    const queueNames = [requestQueueName, tilesQueueName];
+    const requestPrefix = 'tiles-requests';
+    const tilesPrefix = 'tiles';
+    const targetRequestQueue = `${requestPrefix}-${this.projectName}`;
+    const targetTilesQueue = `${tilesPrefix}-${this.projectName}`;
     const queues: QueueStat[] = [];
 
     const pgboss = this.getPgBoss();
@@ -91,17 +92,43 @@ export class QueueStatusService {
         await pgboss.start();
         dbConnected = true;
 
-        for (const name of queueNames) {
-          const rawStats: any = await pgboss.getQueueStats(name);
-          const stats = Array.isArray(rawStats) ? rawStats[0] ?? {} : rawStats ?? {};
-          queues.push({
-            queueName: name,
-            total: stats.totalCount ?? stats.total ?? 0,
-            active: stats.activeCount ?? stats.active ?? 0,
-            queued: stats.queuedCount ?? stats.queued ?? 0,
-            failed: stats.failedCount ?? stats.failed ?? 0,
-            completed: stats.completedCount ?? stats.completed ?? 0,
-          });
+        const allQueues = await pgboss.getQueues();
+        
+        // Find matching or related queues in pg-boss
+        const relevantQueues = allQueues.filter(
+          (q) =>
+            q.name === targetRequestQueue ||
+            q.name === targetTilesQueue ||
+            q.name.startsWith(requestPrefix) ||
+            q.name.startsWith(tilesPrefix)
+        );
+
+        if (relevantQueues.length > 0) {
+          for (const q of relevantQueues) {
+            const rawStats: any = await pgboss.getQueueStats(q.name).catch(() => null);
+            const stats = Array.isArray(rawStats) ? rawStats[0] ?? {} : rawStats ?? {};
+            queues.push({
+              queueName: q.name,
+              total: q.totalCount ?? stats.totalCount ?? 0,
+              active: q.activeCount ?? stats.activeCount ?? 0,
+              queued: (q.queuedCount ?? stats.queuedCount ?? 0) + (q.deferredCount ?? 0),
+              failed: q.failedCount ?? stats.failedCount ?? 0,
+              completed: q.readyCount ?? stats.completedCount ?? 0,
+            });
+          }
+        } else {
+          for (const name of [targetRequestQueue, targetTilesQueue]) {
+            const rawStats: any = await pgboss.getQueueStats(name).catch(() => null);
+            const stats = Array.isArray(rawStats) ? rawStats[0] ?? {} : rawStats ?? {};
+            queues.push({
+              queueName: name,
+              total: stats.totalCount ?? 0,
+              active: stats.activeCount ?? 0,
+              queued: stats.queuedCount ?? 0,
+              failed: stats.failedCount ?? 0,
+              completed: stats.completedCount ?? 0,
+            });
+          }
         }
       } catch (err: any) {
         this.logger.warn({ msg: 'Postgres / pg-boss connection unreachable, returning telemetry state', error: err.message });
@@ -111,8 +138,8 @@ export class QueueStatusService {
     if (queues.length === 0) {
       // Fallback empty telemetry when DB is starting or offline
       queues.push(
-        { queueName: requestQueueName, total: 0, active: 0, queued: 0, failed: 0, completed: 0 },
-        { queueName: tilesQueueName, total: 0, active: 0, queued: 0, failed: 0, completed: 0 }
+        { queueName: targetRequestQueue, total: 0, active: 0, queued: 0, failed: 0, completed: 0 },
+        { queueName: targetTilesQueue, total: 0, active: 0, queued: 0, failed: 0, completed: 0 }
       );
     }
 
