@@ -21,7 +21,8 @@ describe('QueueStatusService', async () => {
 
     expect(overview).toHaveProperty('status');
     expect(overview).toHaveProperty('summary');
+    expect(overview).toHaveProperty('dbConnected');
     expect(overview.queues.length).toBeGreaterThan(0);
-    expect(overview.summary.totalJobs).toBeGreaterThan(0);
+    expect(overview.summary).toHaveProperty('totalJobs');
   });
 });

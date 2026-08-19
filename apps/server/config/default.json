@@ -35,5 +35,26 @@
   },
   "populator": {
     "url": "http://localhost:8081"
+  },
+  "app": {
+    "projectName": "default",
+    "tilesBatchSize": 10000,
+    "metatileSize": 8
+  },
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "username": "postgres",
+    "password": "postgres",
+    "schema": "pgboss",
+    "createSchema": false,
+    "migrate": false,
+    "ssl": {
+      "enabled": false,
+      "ca": "",
+      "key": "",
+      "cert": ""
+    },
+    "database": "postgres"
   }
 }

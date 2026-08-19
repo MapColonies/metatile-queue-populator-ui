@@ -1,6 +1,5 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import shp from 'shpjs';
 import { kml } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
 import Wkt from 'wicket';
@@ -52,6 +51,8 @@ export class SpatialConverter {
   }
 
   private async parseShapefileZip(buffer: Buffer): Promise<FeatureCollection> {
+    const shpModule: any = await import('shpjs');
+    const shp = shpModule.default || shpModule;
     const parsed = await shp(buffer);
     if (Array.isArray(parsed)) {
       // Multiple shapefiles in one zip -> combine features
