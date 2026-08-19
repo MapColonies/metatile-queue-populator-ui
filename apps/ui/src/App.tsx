@@ -29,7 +29,14 @@ function CustomTabPanel(props: TabPanelProps) {
       hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
-      style={{ height: '100%', display: value === index ? 'flex' : 'none', flexDirection: 'column' }}
+      style={{
+        height: '100%',
+        display: value === index ? 'flex' : 'none',
+        flexDirection: 'column',
+        overflowY: index === 0 ? 'hidden' : 'auto',
+        overflowX: 'hidden',
+        flexGrow: 1,
+      }}
       {...other}
     >
       {value === index && children}
