@@ -158,6 +158,51 @@ paths:
           $ref: '#/components/responses/BadRequest'
         5XX:
           $ref: '#/components/responses/UnexpectedError'
+  /queue/status:
+    get:
+      operationId: getQueueStatus
+      tags:
+        - queue
+      summary: Get real-time queue health, active jobs, and status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                  - timestamp
+                  - queues
+                  - summary
+                properties:
+                  status:
+                    type: string
+                    example: UP
+                  timestamp:
+                    type: string
+                  populatorServiceUrl:
+                    type: string
+                  queues:
+                    type: array
+                    items:
+                      type: object
+                  summary:
+                    type: object
+  /queue/metrics:
+    get:
+      operationId: getQueueMetrics
+      tags:
+        - queue
+      summary: Get queue metrics overview
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /tiles/list:
     post:
       operationId: postTilesList

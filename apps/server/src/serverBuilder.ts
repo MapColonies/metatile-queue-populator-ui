@@ -12,6 +12,7 @@ import type { ConfigType } from '@common/config';
 import { SERVICES } from '@common/constants';
 import { TILES_ROUTER_SYMBOL } from './tiles/routes/tilesRouter';
 import { SPATIAL_ROUTER_SYMBOL } from './spatial/routes/spatialRouter';
+import { QUEUE_ROUTER_SYMBOL } from './queue/routes/queueRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -22,7 +23,8 @@ export class ServerBuilder {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.METRICS) private readonly metricsRegistry: Registry,
     @inject(TILES_ROUTER_SYMBOL) private readonly tilesRouter: Router,
-    @inject(SPATIAL_ROUTER_SYMBOL) private readonly spatialRouter: Router
+    @inject(SPATIAL_ROUTER_SYMBOL) private readonly spatialRouter: Router,
+    @inject(QUEUE_ROUTER_SYMBOL) private readonly queueRouter: Router
   ) {
     this.serverInstance = express();
   }
@@ -47,6 +49,7 @@ export class ServerBuilder {
   private buildRoutes(): void {
     this.serverInstance.use('/tiles', this.tilesRouter);
     this.serverInstance.use('/spatial', this.spatialRouter);
+    this.serverInstance.use('/queue', this.queueRouter);
     this.buildDocsRoutes();
   }
 

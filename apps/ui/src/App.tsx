@@ -9,6 +9,7 @@ import { Header } from './components/Header.tsx';
 import { MapComponent } from './components/MapComponent.tsx';
 import { AreaForm } from './components/AreaForm.tsx';
 import { TileListForm } from './components/TileListForm.tsx';
+import { QueueDashboardView } from './views/QueueDashboardView.tsx';
 import { SelectedArea } from './types/geometry.ts';
 
 interface TabPanelProps {
@@ -117,16 +118,7 @@ export const App: React.FC = () => {
           </CustomTabPanel>
 
           <CustomTabPanel value={currentTab} index={1}>
-            <Container maxWidth="lg" sx={{ py: 3 }}>
-              <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
-                Queue Monitoring & Health
-              </Typography>
-              <Paper sx={{ p: 4, border: '1px dashed #2c3842', textAlign: 'center' }}>
-                <Typography color="text.secondary">
-                  [pg-boss / Postgres Real-time Queue Metrics Dashboard - Ticket 12]
-                </Typography>
-              </Paper>
-            </Container>
+            <QueueDashboardView />
           </CustomTabPanel>
 
           <CustomTabPanel value={currentTab} index={2}>
