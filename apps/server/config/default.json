@@ -34,7 +34,7 @@
     }
   },
   "populator": {
-    "url": "http://localhost:8081"
+    "url": "https://render-buildings-mqp-route-vector-dev.apps.j1lk3njp.eastus.aroapp.io/"
   },
   "app": {
     "projectName": "default",

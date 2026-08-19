@@ -107,6 +107,41 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/presets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get list of saved area presets */
+    get: operations['getPresets'];
+    put?: never;
+    /** Save a new area preset */
+    post: operations['createPreset'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/presets/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete a saved area preset */
+    delete: operations['deletePreset'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tiles/list': {
     parameters: {
       query?: never;
@@ -157,6 +192,15 @@ export type components = {
   responses: {
     /** @description Bad request */
     BadRequest: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        'application/json': components['schemas']['Error'];
+      };
+    };
+    /** @description Not Found */
+    NotFound: {
       headers: {
         [name: string]: unknown;
       };
@@ -398,6 +442,78 @@ export interface operations {
           'application/json': Record<string, never>;
         };
       };
+    };
+  };
+  getPresets: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
+        };
+      };
+    };
+  };
+  createPreset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          name: string;
+          description?: string;
+          minZoom: number;
+          maxZoom: number;
+          priority?: number;
+          area: number[] | Record<string, never>;
+        };
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  deletePreset: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      404: components['responses']['NotFound'];
     };
   };
   postTilesList: {

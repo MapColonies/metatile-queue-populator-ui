@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -8,19 +8,38 @@ import {
   FormControlLabel,
   Switch,
   Button,
+  Divider,
   Alert,
   Snackbar,
   CircularProgress,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Stack,
-  Divider,
   Chip,
 } from '@mui/material';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import SendIcon from '@mui/icons-material/Send';
 import LayersIcon from '@mui/icons-material/Layers';
 import { SelectedArea } from '../types/geometry.ts';
 import { TileEstimationWidget } from './TileEstimationWidget.tsx';
 import { SpatialDropzone } from './SpatialDropzone.tsx';
 import axios from 'axios';
+
+interface Preset {
+  id: string;
+  name: string;
+  description?: string;
+  minZoom: number;
+  maxZoom: number;
+  priority?: number;
+  area: [number, number, number, number] | Record<string, any>;
+}
 
 interface AreaFormProps {
   selectedArea: SelectedArea;
@@ -32,11 +51,75 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
   const [priority, setPriority] = useState<number>(0);
   const [force, setForce] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+  const [saveDialogOpen, setSaveDialogOpen] = useState<boolean>(false);
+  const [newPresetName, setNewPresetName] = useState<string>('');
+  const [newPresetDesc, setNewPresetDesc] = useState<string>('');
   const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
     open: false,
     message: '',
     severity: 'info',
   });
+
+  const fetchPresets = async () => {
+    try {
+      const response = await axios.get<Preset[]>('/api/presets');
+      setPresets(response.data);
+    } catch {
+      // Ignore background preset fetch errors
+    }
+  };
+
+  useEffect(() => {
+    fetchPresets();
+  }, []);
+
+  const handlePresetSelect = (presetId: string) => {
+    setSelectedPresetId(presetId);
+    const preset = presets.find((p) => p.id === presetId);
+    if (!preset) return;
+
+    setZoomRange([preset.minZoom, preset.maxZoom]);
+    if (preset.priority !== undefined) setPriority(preset.priority);
+
+    if (Array.isArray(preset.area)) {
+      onAreaChange({ type: 'bbox', bbox: preset.area as [number, number, number, number] });
+    } else {
+      onAreaChange({ type: 'geojson', geojson: preset.area });
+    }
+  };
+
+  const handleSavePreset = async () => {
+    if (!newPresetName.trim() || !selectedArea) return;
+    try {
+      const payload: any = {
+        name: newPresetName.trim(),
+        description: newPresetDesc.trim() || undefined,
+        minZoom: zoomRange[0],
+        maxZoom: zoomRange[1],
+        priority,
+        area: selectedArea.type === 'bbox' ? selectedArea.bbox : selectedArea.geojson,
+      };
+
+      const response = await axios.post('/api/presets', payload);
+      setPresets((prev) => [response.data, ...prev]);
+      setSaveDialogOpen(false);
+      setNewPresetName('');
+      setNewPresetDesc('');
+      setToast({
+        open: true,
+        message: `Preset "${payload.name}" saved!`,
+        severity: 'success',
+      });
+    } catch (err: any) {
+      setToast({
+        open: true,
+        message: err.response?.data?.message || 'Failed to save preset',
+        severity: 'error',
+      });
+    }
+  };
 
   const handleZoomChange = (_event: Event, newValue: number | number[]) => {
     setZoomRange(newValue as [number, number]);
@@ -130,41 +213,82 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
         Calculate and queue metatiles within the selected geographical boundary.
       </Typography>
 
+      {/* Preset Selector */}
+      {presets.length > 0 && (
+        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+          <InputLabel id="preset-select-label">Load Saved Area Preset</InputLabel>
+          <Select
+            labelId="preset-select-label"
+            label="Load Saved Area Preset"
+            value={selectedPresetId}
+            onChange={(e) => handlePresetSelect(e.target.value as string)}
+          >
+            {presets.map((preset) => (
+              <MenuItem key={preset.id} value={preset.id}>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {preset.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {preset.description || `Z${preset.minZoom}-Z${preset.maxZoom}`}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+
       {/* Spatial File Dropzone */}
       <SpatialDropzone onGeometryLoaded={onAreaChange} />
 
       <Divider sx={{ mb: 2 }} />
 
       <form onSubmit={handleSubmit}>
-        <Stack spacing={2.5}>
-          {/* Selected Geometry Status */}
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-              TARGET GEOMETRY
-            </Typography>
-            <Box sx={{ mt: 0.8, p: 1.2, bgcolor: 'rgba(0,0,0,0.25)', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-              {selectedArea ? (
-                <Box>
-                  <Chip
-                    label={selectedArea.type === 'bbox' ? 'Bounding Box (BBOX)' : 'GeoJSON Feature'}
-                    size="small"
-                    color="primary"
-                    sx={{ mb: 0.8 }}
-                  />
-                  <Typography variant="caption" display="block" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                    {selectedArea.type === 'bbox'
-                      ? `[${selectedArea.bbox.join(', ')}]`
-                      : `Type: ${selectedArea.geojson.geometry?.type || 'Geometry'}`}
-                  </Typography>
-                </Box>
-              ) : (
-                <Typography variant="caption" color="text.secondary">
-                  No area selected. Use the map drawing tools on the left to draw a box or polygon.
-                </Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          {/* Target Area Readout & Save Preset */}
+          <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                TARGET GEOMETRY
+              </Typography>
+              {selectedArea && (
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={<BookmarkBorderIcon fontSize="inherit" />}
+                  onClick={() => setSaveDialogOpen(true)}
+                  sx={{ fontSize: '0.7rem', py: 0.1, minWidth: 0 }}
+                >
+                  Save Preset
+                </Button>
               )}
             </Box>
-          </Box>
 
+            {selectedArea ? (
+              <Box sx={{ mt: 1 }}>
+                <Chip
+                  label={selectedArea.type === 'bbox' ? 'Bounding Box (BBOX)' : 'Polygon Geometry (GeoJSON)'}
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                />
+                <Typography variant="caption" sx={{ display: 'block', wordBreak: 'break-all', fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.7rem' }}>
+                  {selectedArea.type === 'bbox'
+                    ? `[${selectedArea.bbox.map((v) => v.toFixed(4)).join(', ')}]`
+                    : 'Active GeoJSON Feature/Collection loaded'}
+                </Typography>
+              </Box>
+            ) : (
+              <Alert severity="info" sx={{ mt: 1, py: 0.5, fontSize: '0.75rem' }}>
+                Use map toolbar on left to draw BBOX or Polygon, or drop a spatial file above.
+              </Alert>
+            )}
+          </Box>
+        </Box>
+
+        <Stack spacing={2.5} sx={{ mt: 2.5 }}>
           {/* Zoom Range Slider */}
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -229,18 +353,48 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
       </form>
 
       {/* Notification Toast */}
+      {/* Save Preset Dialog */}
+      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Save as Area Preset</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Save the current map geometry and zoom configuration (Z{zoomRange[0]}-Z{zoomRange[1]}) as a reusable preset.
+          </Typography>
+          <Stack spacing={2}>
+            <TextField
+              label="Preset Name"
+              size="small"
+              fullWidth
+              required
+              value={newPresetName}
+              onChange={(e) => setNewPresetName(e.target.value)}
+              placeholder="e.g. Northern District AOI"
+            />
+            <TextField
+              label="Description (Optional)"
+              size="small"
+              fullWidth
+              value={newPresetDesc}
+              onChange={(e) => setNewPresetDesc(e.target.value)}
+              placeholder="Operational bounds description"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSavePreset} disabled={!newPresetName.trim()}>
+            Save Preset
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={toast.open}
-        autoHideDuration={6000}
-        onClose={() => setToast((prev) => ({ ...prev, open: false }))}
+        autoHideDuration={5000}
+        onClose={() => setToast({ ...toast, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={() => setToast((prev) => ({ ...prev, open: false }))}
-          severity={toast.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
+        <Alert severity={toast.severity} sx={{ width: '100%' }}>
           {toast.message}
         </Alert>
       </Snackbar>

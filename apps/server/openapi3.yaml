@@ -257,6 +257,78 @@ paths:
             application/json:
               schema:
                 type: object
+  /presets:
+    get:
+      operationId: getPresets
+      tags:
+        - presets
+      summary: Get list of saved area presets
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      operationId: createPreset
+      tags:
+        - presets
+      summary: Save a new area preset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - minZoom
+                - maxZoom
+                - area
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                minZoom:
+                  type: integer
+                maxZoom:
+                  type: integer
+                priority:
+                  type: integer
+                area:
+                  oneOf:
+                    - type: array
+                      items:
+                        type: number
+                    - type: object
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+  /presets/{id}:
+    delete:
+      operationId: deletePreset
+      tags:
+        - presets
+      summary: Delete a saved area preset
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '404':
+          $ref: '#/components/responses/NotFound'
   /tiles/list:
     post:
       operationId: postTilesList
@@ -294,6 +366,12 @@ components:
   responses:
     BadRequest:
       description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not Found
       content:
         application/json:
           schema:
