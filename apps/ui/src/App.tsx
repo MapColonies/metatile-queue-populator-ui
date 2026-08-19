@@ -6,6 +6,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { darkTheme } from './theme/index.ts';
 import { Header } from './components/Header.tsx';
+import { MapComponent } from './components/MapComponent.tsx';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -63,18 +64,8 @@ export const App: React.FC = () => {
         {/* Tab Content Areas */}
         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <CustomTabPanel value={currentTab} index={0}>
-            <Box sx={{ p: 3, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-              <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
-                Tile Queue Creator
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Select an area using the map, upload spatial files, or provide custom tile coordinate lists to populate the metatile queue.
-              </Typography>
-              <Paper sx={{ p: 4, flexGrow: 1, border: '1px dashed #2c3842', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Typography color="text.secondary">
-                  [OpenLayers Map & Area Form Container - Ticket 04 / 05 / 06]
-                </Typography>
-              </Paper>
+            <Box sx={{ flexGrow: 1, width: '100%', height: '100%', position: 'relative' }}>
+              <MapComponent />
             </Box>
           </CustomTabPanel>
 
