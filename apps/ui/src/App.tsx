@@ -182,6 +182,7 @@ export const App: React.FC = () => {
             <PresetsView
               onLoadPreset={handleLoadPreset}
               onNavigateToDraw={() => {
+                setSelectedArea(null);
                 setIsPresetMode(true);
                 setCreatorMode('area');
                 setCurrentTab(0);

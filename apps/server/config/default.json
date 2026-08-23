@@ -58,10 +58,10 @@
     "database": "vector-rendering-buildings"
   },
   "appDb": {
-    "host": "localhost",
+    "host": "postgres-prod.mapcolonies.net",
     "port": 5432,
     "username": "postgres",
-    "password": "postgres",
+    "password": "Libot4allnonprod",
     "database": "metatile-queue-populator-ui",
     "schema": "public",
     "synchronize": true,

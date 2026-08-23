@@ -66,13 +66,18 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   const [zoomLevel, setZoomLevel] = useState<number>(7);
   const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
 
-  // Sync external loaded area (e.g. from File Dropzone or Preset)
+  // Sync external loaded area (e.g. from File Dropzone, Preset, or Tab Clear)
   useEffect(() => {
-    if (!externalArea || !mapRef.current) return;
+    if (!mapRef.current) return;
 
     const map = mapRef.current;
     const source = vectorSourceRef.current;
     source.clear();
+
+    if (!externalArea) {
+      setHasDrawnGeometry(false);
+      return;
+    }
 
     const geojsonFormat = new GeoJSON();
     let features: any[] = [];
@@ -158,6 +163,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
           });
         }, 60);
       }
+    } else {
+      setHasDrawnGeometry(false);
     }
   }, [externalArea]);
 
