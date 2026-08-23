@@ -76,6 +76,13 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
 
     if (!externalArea) {
       setHasDrawnGeometry(false);
+      // Reset view to default center and zoom when clearing area / starting fresh
+      map.updateSize();
+      map.getView().animate({
+        center: fromLonLat([34.7818, 32.0853]),
+        zoom: 7,
+        duration: 400,
+      });
       return;
     }
 
