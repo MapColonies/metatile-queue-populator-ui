@@ -44,9 +44,18 @@ interface Preset {
 interface AreaFormProps {
   selectedArea: SelectedArea;
   onAreaChange: (area: SelectedArea) => void;
+  isPresetMode?: boolean;
+  onCancelPresetMode?: () => void;
+  onPresetSaved?: () => void;
 }
 
-export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }) => {
+export const AreaForm: React.FC<AreaFormProps> = ({
+  selectedArea,
+  onAreaChange,
+  isPresetMode = false,
+  onCancelPresetMode,
+  onPresetSaved,
+}) => {
   const [zoomRange, setZoomRange] = useState<[number, number]>([0, 10]);
   const [priority, setPriority] = useState<number>(0);
   const [force, setForce] = useState<boolean>(false);
@@ -112,6 +121,9 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
         message: `Preset "${payload.name}" saved!`,
         severity: 'success',
       });
+      if (onPresetSaved) {
+        onPresetSaved();
+      }
     } catch (err: any) {
       setToast({
         open: true,
@@ -198,19 +210,28 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
         p: 2.5,
         bgcolor: 'background.paper',
         border: '1px solid',
-        borderColor: 'divider',
+        borderColor: isPresetMode ? 'secondary.main' : 'divider',
         borderRadius: 2,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-        <LayersIcon color="primary" />
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          Queue Area Job
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {isPresetMode ? <BookmarkBorderIcon color="secondary" /> : <LayersIcon color="primary" />}
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            {isPresetMode ? 'Create New Preset' : 'Queue Area Job'}
+          </Typography>
+        </Box>
+        {isPresetMode && onCancelPresetMode && (
+          <Button size="small" variant="text" color="inherit" onClick={onCancelPresetMode}>
+            Cancel
+          </Button>
+        )}
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Calculate and queue metatiles within the selected geographical boundary.
+        {isPresetMode
+          ? 'Draw a BBOX/Polygon on the map or drop a file to define and save a reusable preset.'
+          : 'Calculate and queue metatiles within the selected geographical boundary.'}
       </Typography>
 
       {/* Preset Selector Autocomplete */}
@@ -265,14 +286,14 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
       <Divider sx={{ mb: 2 }} />
 
       <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-          {/* Target Area Readout & Save Preset */}
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          {/* Target Area Readout */}
           <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
                 TARGET GEOMETRY
               </Typography>
-              {selectedArea && (
+              {selectedArea && !isPresetMode && (
                 <Button
                   size="small"
                   variant="text"
@@ -290,7 +311,7 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
                 <Chip
                   label={selectedArea.type === 'bbox' ? 'Bounding Box (BBOX)' : 'Polygon Geometry (GeoJSON)'}
                   size="small"
-                  color="primary"
+                  color={isPresetMode ? 'secondary' : 'primary'}
                   variant="outlined"
                   sx={{ fontWeight: 600, mb: 0.5 }}
                 />
@@ -301,21 +322,21 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
                 </Typography>
               </Box>
             ) : (
-              <Alert severity="info" sx={{ mt: 1, py: 0.5, fontSize: '0.75rem' }}>
-                Use map toolbar on left to draw BBOX or Polygon, or drop a spatial file above.
+              <Alert severity="info" sx={{ mt: 1, py: 0, fontSize: '0.75rem' }}>
+                Draw on the map or drop a spatial file above.
               </Alert>
             )}
           </Box>
         </Box>
 
         <Stack spacing={2.5} sx={{ mt: 2.5 }}>
-          {/* Zoom Range Slider */}
+          {/* Zoom Level Slider */}
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                ZOOM RANGE (0 - 18)
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                Zoom Range
               </Typography>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
                 {zoomRange[0]} — {zoomRange[1]}
               </Typography>
             </Box>
@@ -335,8 +356,8 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
             />
           </Box>
 
-          {/* Real-time Tile Estimation Preview */}
-          <TileEstimationWidget selectedArea={selectedArea} zoomRange={zoomRange} />
+          {/* Real-time Tile Estimation Preview (Only in queue populate mode) */}
+          {!isPresetMode && <TileEstimationWidget selectedArea={selectedArea} zoomRange={zoomRange} />}
 
           {/* Priority */}
           <TextField
@@ -350,25 +371,42 @@ export const AreaForm: React.FC<AreaFormProps> = ({ selectedArea, onAreaChange }
             inputProps={{ min: 0 }}
           />
 
-          {/* Force Toggle */}
-          <FormControlLabel
-            control={<Switch checked={force} onChange={(e) => setForce(e.target.checked)} color="warning" />}
-            label={<Typography variant="body2">Force queueing (overwrite duplicates)</Typography>}
-          />
+          {/* Force Toggle (Only in queue populate mode) */}
+          {!isPresetMode && (
+            <FormControlLabel
+              control={<Switch checked={force} onChange={(e) => setForce(e.target.checked)} color="warning" />}
+              label={<Typography variant="body2">Force queueing (overwrite duplicates)</Typography>}
+            />
+          )}
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            size="large"
-            disabled={!selectedArea || loading}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
-            fullWidth
-            sx={{ mt: 1 }}
-          >
-            {loading ? 'Submitting to Queue...' : 'Populate Queue'}
-          </Button>
+          {/* Submit / Save Preset Button */}
+          {isPresetMode ? (
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              disabled={!selectedArea}
+              startIcon={<BookmarkBorderIcon />}
+              onClick={() => setSaveDialogOpen(true)}
+              fullWidth
+              sx={{ mt: 1 }}
+            >
+              Save Preset
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              size="large"
+              disabled={!selectedArea || loading}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              fullWidth
+              sx={{ mt: 1 }}
+            >
+              {loading ? 'Submitting to Queue...' : 'Populate Queue'}
+            </Button>
+          )}
         </Stack>
       </form>
 

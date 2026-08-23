@@ -47,13 +47,18 @@ function CustomTabPanel(props: TabPanelProps) {
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [creatorMode, setCreatorMode] = useState<'area' | 'list'>('area');
+  const [isPresetMode, setIsPresetMode] = useState<boolean>(false);
   const [selectedArea, setSelectedArea] = useState<SelectedArea>(null);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
+    if (newValue !== 0) {
+      setIsPresetMode(false);
+    }
   };
 
   const handleReplayJob = (record: HistoryRecord) => {
+    setIsPresetMode(false);
     if (record.type === 'area') {
       setCreatorMode('area');
       const params = record.parameters;
@@ -69,6 +74,7 @@ export const App: React.FC = () => {
   };
 
   const handleLoadPreset = (preset: AreaPreset) => {
+    setIsPresetMode(false);
     setCreatorMode('area');
     if (Array.isArray(preset.area)) {
       setSelectedArea({ type: 'bbox', bbox: preset.area as [number, number, number, number] });
@@ -118,32 +124,42 @@ export const App: React.FC = () => {
                     bgcolor: 'rgba(26, 34, 40, 0.95)',
                     backdropFilter: 'blur(6px)',
                     border: '1px solid',
-                    borderColor: 'divider',
+                    borderColor: isPresetMode ? 'secondary.main' : 'divider',
                     borderRadius: 2,
                   }}
                 >
                   <Button
                     size="small"
                     variant={creatorMode === 'area' ? 'contained' : 'text'}
-                    color="primary"
+                    color={isPresetMode ? 'secondary' : 'primary'}
                     onClick={() => setCreatorMode('area')}
                     sx={{ px: 2 }}
                   >
-                    Area Mode
+                    {isPresetMode ? 'Preset Designer' : 'Area Mode'}
                   </Button>
-                  <Button
-                    size="small"
-                    variant={creatorMode === 'list' ? 'contained' : 'text'}
-                    color="primary"
-                    onClick={() => setCreatorMode('list')}
-                    sx={{ px: 2 }}
-                  >
-                    Tile List Mode
-                  </Button>
+                  {!isPresetMode && (
+                    <Button
+                      size="small"
+                      variant={creatorMode === 'list' ? 'contained' : 'text'}
+                      color="primary"
+                      onClick={() => setCreatorMode('list')}
+                      sx={{ px: 2 }}
+                    >
+                      Tile List Mode
+                    </Button>
+                  )}
                 </Paper>
 
                 {creatorMode === 'area' ? (
-                  <AreaForm selectedArea={selectedArea} onAreaChange={setSelectedArea} />
+                  <AreaForm
+                    selectedArea={selectedArea}
+                    onAreaChange={setSelectedArea}
+                    isPresetMode={isPresetMode}
+                    onCancelPresetMode={() => setIsPresetMode(false)}
+                    onPresetSaved={() => {
+                      setIsPresetMode(false);
+                    }}
+                  />
                 ) : (
                   <TileListForm />
                 )}
@@ -163,6 +179,7 @@ export const App: React.FC = () => {
             <PresetsView
               onLoadPreset={handleLoadPreset}
               onNavigateToDraw={() => {
+                setIsPresetMode(true);
                 setCreatorMode('area');
                 setCurrentTab(0);
               }}
