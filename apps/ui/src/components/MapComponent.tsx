@@ -8,11 +8,14 @@ import CropSquareIcon from '@mui/icons-material/CropSquare';
 import PolylineIcon from '@mui/icons-material/Polyline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PanToolIcon from '@mui/icons-material/PanTool';
+import GridOnIcon from '@mui/icons-material/GridOn';
+import GridOffIcon from '@mui/icons-material/GridOff';
 
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
+import TileDebug from 'ol/source/TileDebug';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Draw, { createBox } from 'ol/interaction/Draw';
@@ -43,9 +46,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource>(new VectorSource());
+  const debugLayerRef = useRef<TileLayer<TileDebug> | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
 
   const [drawMode, setDrawMode] = useState<DrawMode>('none');
+  const [showDebugLayer, setShowDebugLayer] = useState<boolean>(false);
   const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.0000', lat: '0.0000' });
   const [zoomLevel, setZoomLevel] = useState<number>(7);
   const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
@@ -216,6 +221,12 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   }, [updateDrawnArea]);
 
   useEffect(() => {
+    if (debugLayerRef.current) {
+      debugLayerRef.current.setVisible(showDebugLayer);
+    }
+  }, [showDebugLayer]);
+
+  useEffect(() => {
     setDrawingInteraction(drawMode);
   }, [drawMode, setDrawingInteraction]);
 
@@ -232,14 +243,24 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     const vectorLayer = new VectorLayer({
       source: vectorSourceRef.current,
       style: vectorStyle,
+      zIndex: 10,
     });
+
+    const debugLayer = new TileLayer({
+      source: new TileDebug(),
+      visible: showDebugLayer,
+      zIndex: 5,
+    });
+    debugLayerRef.current = debugLayer;
 
     const map = new Map({
       target: mapElement.current,
       layers: [
         new TileLayer({
           source: new OSM(),
+          zIndex: 1,
         }),
+        debugLayer,
         vectorLayer,
       ],
       view: initialView,
@@ -407,6 +428,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
         }}
       >
         <ButtonGroup orientation="vertical" size="small" variant="text">
+          <Tooltip title={showDebugLayer ? "Hide Tile Scheme (Debug Grid)" : "Show Tile Scheme (Debug Grid)"} placement="left">
+            <IconButton
+              onClick={() => setShowDebugLayer((prev) => !prev)}
+              size="small"
+              color={showDebugLayer ? "warning" : "primary"}
+            >
+              {showDebugLayer ? <GridOnIcon fontSize="small" /> : <GridOffIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Zoom In" placement="left">
             <IconButton onClick={handleZoomIn} size="small" color="primary">
               <ZoomInIcon fontSize="small" />
@@ -453,6 +483,14 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
           Lon: <strong style={{ color: '#fff' }}>{coordinates.lon}°</strong> | Lat: <strong style={{ color: '#fff' }}>{coordinates.lat}°</strong>
         </Typography>
         <Chip label={`Zoom: ${zoomLevel}`} size="small" variant="outlined" color="primary" sx={{ height: 20, fontSize: '0.7rem' }} />
+        {showDebugLayer && (
+          <Chip
+            label="Grid Scheme (Z/X/Y)"
+            size="small"
+            color="warning"
+            sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }}
+          />
+        )}
         {drawMode !== 'none' && (
           <Chip
             label={`Mode: ${drawMode.toUpperCase()}`}
