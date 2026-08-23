@@ -51,7 +51,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
 
   const [drawMode, setDrawMode] = useState<DrawMode>('none');
   const [showDebugLayer, setShowDebugLayer] = useState<boolean>(false);
-  const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.0000', lat: '0.0000' });
+  const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.00000000', lat: '0.00000000' });
   const [zoomLevel, setZoomLevel] = useState<number>(7);
   const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
 
@@ -271,8 +271,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
       if (evt.coordinate) {
         const lonLat = toLonLat(evt.coordinate);
         setCoordinates({
-          lon: lonLat[0].toFixed(4),
-          lat: lonLat[1].toFixed(4),
+          lon: lonLat[0].toFixed(8),
+          lat: lonLat[1].toFixed(8),
         });
       }
     });
