@@ -158,6 +158,7 @@ export const App: React.FC = () => {
                     onCancelPresetMode={() => setIsPresetMode(false)}
                     onPresetSaved={() => {
                       setIsPresetMode(false);
+                      setCurrentTab(3); // Switch back to Presets Tab
                     }}
                   />
                 ) : (

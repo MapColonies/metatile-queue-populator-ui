@@ -356,8 +356,8 @@ export const AreaForm: React.FC<AreaFormProps> = ({
             />
           </Box>
 
-          {/* Real-time Tile Estimation Preview (Only in queue populate mode) */}
-          {!isPresetMode && <TileEstimationWidget selectedArea={selectedArea} zoomRange={zoomRange} />}
+          {/* Real-time Tile Estimation Preview */}
+          <TileEstimationWidget selectedArea={selectedArea} zoomRange={zoomRange} />
 
           {/* Priority */}
           <TextField
