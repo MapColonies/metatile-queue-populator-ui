@@ -11,6 +11,7 @@ import { SPATIAL_ROUTER_SYMBOL, spatialRouterFactory } from './spatial/routes/sp
 import { QUEUE_ROUTER_SYMBOL, queueRouterFactory } from './queue/routes/queueRouter';
 import { HISTORY_ROUTER_SYMBOL, historyRouterFactory } from './history/routes/historyRouter';
 import { PRESET_ROUTER_SYMBOL, presetRouterFactory } from './presets/routes/presetRouter';
+import { DATA_SOURCE_SYMBOL, createDataSource } from './common/db/dataSource';
 import { getConfig } from './common/config';
 
 export interface RegisterOptions {
@@ -29,11 +30,14 @@ export const registerExternalValues = async (options?: RegisterOptions): Promise
   const metricsRegistry = new Registry();
   configInstance.initializeMetrics(metricsRegistry);
 
+  const dataSourceWrapper = await createDataSource(configInstance, logger);
+
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: configInstance } },
     { token: SERVICES.LOGGER, provider: { useValue: logger } },
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
     { token: SERVICES.METRICS, provider: { useValue: metricsRegistry } },
+    { token: SERVICES.DATA_SOURCE, provider: { useValue: dataSourceWrapper } },
     { token: TILES_ROUTER_SYMBOL, provider: { useFactory: tilesRouterFactory } },
     { token: SPATIAL_ROUTER_SYMBOL, provider: { useFactory: spatialRouterFactory } },
     { token: QUEUE_ROUTER_SYMBOL, provider: { useFactory: queueRouterFactory } },
@@ -43,6 +47,9 @@ export const registerExternalValues = async (options?: RegisterOptions): Promise
       token: 'onSignal',
       provider: {
         useValue: async (): Promise<void> => {
+          if (dataSourceWrapper.instance?.isInitialized) {
+            await dataSourceWrapper.instance.destroy();
+          }
           await Promise.all([getTracing().stop()]);
         },
       },

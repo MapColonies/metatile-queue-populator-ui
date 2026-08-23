@@ -10,30 +10,42 @@ describe('HistoryService', async () => {
     historyService = new HistoryService(logger);
   });
 
-  it('should record an area submission and retrieve it in getHistory', () => {
+  it('should record an area submission and retrieve it in getHistory', async () => {
     const params = {
       minZoom: 2,
       maxZoom: 6,
       area: [34, 31, 35, 32],
     };
 
-    const record = historyService.recordSubmission('area', params, 'SUCCESS', 'Job submitted');
+    const record = await historyService.recordSubmission('area', params, 'SUCCESS', 'Job submitted');
 
     expect(record.id).toBeDefined();
     expect(record.type).toBe('area');
     expect(record.summary).toContain('Area Job (Z2-Z6');
 
-    const history = historyService.getHistory();
+    const history = await historyService.getHistory();
     expect(history).toHaveLength(1);
     expect(history[0].id).toBe(record.id);
   });
 
-  it('should record a tile list submission', () => {
-    const params = {
-      tiles: [{ z: 10, x: 500, y: 300, metatile: 8 }],
-    };
+  it('should filter history by type and status', async () => {
+    await historyService.recordSubmission('area', { minZoom: 0, maxZoom: 1 }, 'SUCCESS');
+    await historyService.recordSubmission('list', { tiles: [] }, 'FAILED');
 
-    const record = historyService.recordSubmission('list', params, 'SUCCESS');
-    expect(record.summary).toBe('Tile List Job (1 metatiles)');
+    const areaHistory = await historyService.getHistory({ type: 'area' });
+    expect(areaHistory).toHaveLength(1);
+    expect(areaHistory[0].type).toBe('area');
+
+    const failedHistory = await historyService.getHistory({ status: 'FAILED' });
+    expect(failedHistory).toHaveLength(1);
+    expect(failedHistory[0].status).toBe('FAILED');
+  });
+
+  it('should clear history successfully', async () => {
+    await historyService.recordSubmission('area', { minZoom: 0, maxZoom: 1 }, 'SUCCESS');
+    expect((await historyService.getHistory()).length).toBeGreaterThan(0);
+
+    await historyService.clearHistory();
+    expect(await historyService.getHistory()).toHaveLength(0);
   });
 });

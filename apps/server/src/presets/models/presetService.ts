@@ -3,7 +3,10 @@ import { inject, injectable, singleton } from 'tsyringe';
 import { randomUUID } from 'crypto';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import type { Repository, DataSource } from 'typeorm';
 import { SERVICES } from '../../common/constants';
+import { DATA_SOURCE_SYMBOL } from '../../common/db/dataSource';
+import { PresetEntity } from './presetEntity';
 
 export interface AreaPreset {
   id: string;
@@ -19,17 +22,47 @@ export interface AreaPreset {
   createdAt: string;
 }
 
-@singleton()
 @injectable()
 export class PresetService {
-  private presets: AreaPreset[] = [];
+  private inMemoryPresets: AreaPreset[] = [];
+  private presetRepository: Repository<PresetEntity> | null = null;
 
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {
-    this.initializeDefaultPresets();
+  public constructor(
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.DATA_SOURCE) private readonly dataSourceWrapper: any
+  ) {
+    const ds = this.dataSourceWrapper?.instance ?? (this.dataSourceWrapper?.isInitialized ? this.dataSourceWrapper : null);
+    if (ds?.isInitialized) {
+      this.presetRepository = ds.getRepository(PresetEntity);
+    }
+    void this.initializePresets();
   }
 
-  private initializeDefaultPresets(): void {
-    // 1. Check for bundled global presets file
+  private async initializePresets(): Promise<void> {
+    const rawPresets = this.loadBundlePresets();
+
+    if (this.presetRepository) {
+      try {
+        const count = await this.presetRepository.count();
+        if (count === 0 && rawPresets.length > 0) {
+          this.logger.info({ msg: 'Seeding presets into PostgreSQL database', count: rawPresets.length });
+          const entities = rawPresets.map((p) => this.presetRepository!.create(p));
+          // Batch insert in chunks of 50
+          for (let i = 0; i < entities.length; i += 50) {
+            await this.presetRepository.save(entities.slice(i, i + 50));
+          }
+          this.logger.info({ msg: 'Successfully seeded global presets into PostgreSQL' });
+        }
+        return;
+      } catch (err: any) {
+        this.logger.warn({ msg: 'Error accessing presets table, falling back to in-memory store', error: err.message });
+      }
+    }
+
+    this.inMemoryPresets = rawPresets;
+  }
+
+  private loadBundlePresets(): AreaPreset[] {
     const possiblePaths = [
       resolve(__dirname, '../../../../assets/globe_presets.json'),
       resolve(__dirname, '../../../assets/globe_presets.json'),
@@ -38,66 +71,103 @@ export class PresetService {
       '/home/danielh3/repos/metatile-queue-poplator-ui/apps/server/assets/globe_presets.json',
     ];
 
-    let loaded = false;
     for (const p of possiblePaths) {
       if (existsSync(p)) {
         try {
           const raw = readFileSync(p, 'utf8');
-          this.presets = JSON.parse(raw);
-          this.logger.info({ msg: 'Loaded hierarchical global presets', count: this.presets.length, path: p });
-          loaded = true;
-          break;
+          const parsed = JSON.parse(raw);
+          return parsed;
         } catch (err: any) {
           this.logger.warn({ msg: 'Failed to read globe presets from path', path: p, error: err.message });
         }
       }
     }
 
-    if (!loaded || this.presets.length === 0) {
-      this.presets = [
-        {
-          id: 'default-israel',
-          name: 'Israel Region',
-          category: 'Country',
-          continent: 'Asia',
-          subregion: 'Western Asia',
-          description: 'Standard operational bounding box covering the central region',
-          minZoom: 0,
-          maxZoom: 10,
-          priority: 1,
-          area: [34.17, 29.45, 35.9, 33.35],
-          createdAt: new Date().toISOString(),
-        },
-      ];
+    return [
+      {
+        id: 'default-israel',
+        name: 'Israel Region',
+        category: 'Country',
+        continent: 'Asia',
+        subregion: 'Western Asia',
+        description: 'Standard operational bounding box covering the central region',
+        minZoom: 0,
+        maxZoom: 10,
+        priority: 1,
+        area: [34.17, 29.45, 35.9, 33.35],
+        createdAt: new Date().toISOString(),
+      },
+    ];
+  }
+
+  public async getPresets(): Promise<AreaPreset[]> {
+    if (this.presetRepository) {
+      try {
+        const entities = await this.presetRepository.find({
+          order: { createdAt: 'DESC' },
+        });
+        return entities as AreaPreset[];
+      } catch (err: any) {
+        this.logger.warn({ msg: 'Error querying presets from database, using memory fallback', error: err.message });
+      }
     }
+    return this.inMemoryPresets;
   }
 
-  public getPresets(): AreaPreset[] {
-    return this.presets;
+  public async getPresetById(id: string): Promise<AreaPreset | undefined> {
+    if (this.presetRepository) {
+      try {
+        const entity = await this.presetRepository.findOneBy({ id });
+        return (entity as AreaPreset) ?? undefined;
+      } catch (err: any) {
+        this.logger.warn({ msg: 'Error querying preset by ID from database', error: err.message });
+      }
+    }
+    return this.inMemoryPresets.find((p) => p.id === id);
   }
 
-  public getPresetById(id: string): AreaPreset | undefined {
-    return this.presets.find((p) => p.id === id);
-  }
-
-  public createPreset(data: Omit<AreaPreset, 'id' | 'createdAt'>): AreaPreset {
+  public async createPreset(data: Omit<AreaPreset, 'id' | 'createdAt'>): Promise<AreaPreset> {
     const newPreset: AreaPreset = {
       id: randomUUID(),
       ...data,
       createdAt: new Date().toISOString(),
     };
 
-    this.presets.unshift(newPreset);
-    this.logger.info({ msg: 'Created area preset', presetId: newPreset.id, name: newPreset.name });
+    if (this.presetRepository) {
+      try {
+        const entity = this.presetRepository.create(newPreset);
+        await this.presetRepository.save(entity);
+        this.logger.info({ msg: 'Created and persisted area preset in PostgreSQL', presetId: newPreset.id, name: newPreset.name });
+        return entity as AreaPreset;
+      } catch (err: any) {
+        this.logger.warn({ msg: 'Failed to persist preset in database, storing in memory', error: err.message });
+      }
+    }
+
+    this.inMemoryPresets.unshift(newPreset);
+    this.logger.info({ msg: 'Created area preset in memory', presetId: newPreset.id, name: newPreset.name });
     return newPreset;
   }
 
-  public deletePreset(id: string): boolean {
-    const initialLen = this.presets.length;
-    this.presets = this.presets.filter((p) => p.id !== id);
-    const removed = this.presets.length < initialLen;
+  public async deletePreset(id: string): Promise<boolean> {
+    if (this.presetRepository) {
+      try {
+        const result = await this.presetRepository.delete({ id });
+        const removed = (result.affected ?? 0) > 0;
+        if (removed) {
+          this.logger.info({ msg: 'Deleted preset from PostgreSQL', presetId: id });
+        }
+        return removed;
+      } catch (err: any) {
+        this.logger.warn({ msg: 'Failed to delete preset from database, trying memory', error: err.message });
+      }
+    }
+
+    const initialLen = this.inMemoryPresets.length;
+    this.inMemoryPresets = this.inMemoryPresets.filter((p) => p.id !== id);
+    const removed = this.inMemoryPresets.length < initialLen;
     if (removed) {
-      this.logger.info({ msg: 'Deleted preset', presetId: id });
+      this.logger.info({ msg: 'Deleted preset from memory', presetId: id });
     }
     return removed;
   }

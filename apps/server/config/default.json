@@ -56,5 +56,18 @@
       "cert": ""
     },
     "database": "vector-rendering-buildings"
+  },
+  "appDb": {
+    "host": "postgres-prod.mapcolonies.net",
+    "port": 5432,
+    "username": "postgres",
+    "password": "Libot4allnonprod",
+    "database": "metatile-queue-populator-ui",
+    "schema": "public",
+    "synchronize": true,
+    "logging": false,
+    "ssl": {
+      "enabled": false
+    }
   }
 }

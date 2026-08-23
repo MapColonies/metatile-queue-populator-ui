@@ -10,15 +10,15 @@ describe('PresetService', async () => {
     presetService = new PresetService(logger);
   });
 
-  it('should return initial predefined presets', () => {
-    const presets = presetService.getPresets();
+  it('should return initial predefined presets', async () => {
+    const presets = await presetService.getPresets();
     expect(presets.length).toBeGreaterThanOrEqual(3);
     expect(presets[0]).toHaveProperty('name');
     expect(presets[0]).toHaveProperty('area');
   });
 
-  it('should create and delete a new preset', () => {
-    const newPreset = presetService.createPreset({
+  it('should create and delete a new preset', async () => {
+    const newPreset = await presetService.createPreset({
       name: 'Custom Test Area',
       minZoom: 1,
       maxZoom: 5,
@@ -26,10 +26,10 @@ describe('PresetService', async () => {
     });
 
     expect(newPreset.id).toBeDefined();
-    expect(presetService.getPresetById(newPreset.id)).toBeDefined();
+    expect(await presetService.getPresetById(newPreset.id)).toBeDefined();
 
-    const deleted = presetService.deletePreset(newPreset.id);
+    const deleted = await presetService.deletePreset(newPreset.id);
     expect(deleted).toBe(true);
-    expect(presetService.getPresetById(newPreset.id)).toBeUndefined();
+    expect(await presetService.getPresetById(newPreset.id)).toBeUndefined();
   });
 });

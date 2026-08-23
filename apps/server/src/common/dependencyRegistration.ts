@@ -18,11 +18,21 @@ export const registerDependencies = (
   dependencies.forEach((injectionObj) => {
     const inject = override?.find((overrideObj) => overrideObj.token === injectionObj.token) === undefined;
     if (inject) {
-      container.register(injectionObj.token, injectionObj.provider as constructor<unknown>);
+      const provider = injectionObj.provider;
+      if (provider && typeof provider === 'object' && 'useValue' in provider) {
+        container.register(injectionObj.token, { useValue: (provider as ValueProvider<unknown>).useValue ?? null });
+      } else {
+        container.register(injectionObj.token, provider as constructor<unknown>);
+      }
     }
   });
   override?.forEach((injectionObj) => {
-    container.register(injectionObj.token, injectionObj.provider as constructor<unknown>);
+    const provider = injectionObj.provider;
+    if (provider && typeof provider === 'object' && 'useValue' in provider) {
+      container.register(injectionObj.token, { useValue: (provider as ValueProvider<unknown>).useValue ?? null });
+    } else {
+      container.register(injectionObj.token, provider as constructor<unknown>);
+    }
   });
   return container;
 };
