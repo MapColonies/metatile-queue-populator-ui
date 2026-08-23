@@ -61,49 +61,86 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     const geojsonFormat = new GeoJSON();
     let features: any[] = [];
 
-    if (externalArea.type === 'geojson') {
-      features = geojsonFormat.readFeatures(externalArea.geojson, {
-        featureProjection: 'EPSG:3857',
-        dataProjection: 'EPSG:4326',
-      });
-    } else if (externalArea.type === 'bbox') {
-      const [west, south, east, north] = externalArea.bbox;
-      const polyFeature = geojsonFormat.readFeature(
-        {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'Polygon',
-            coordinates: [
-              [
-                [west, south],
-                [east, south],
-                [east, north],
-                [west, north],
-                [west, south],
-              ],
-            ],
-          },
-        },
-        {
-          featureProjection: 'EPSG:3857',
-          dataProjection: 'EPSG:4326',
+    try {
+      if (externalArea.type === 'geojson') {
+        const raw = externalArea.geojson;
+        if (raw) {
+          if (raw.type === 'FeatureCollection') {
+            features = geojsonFormat.readFeatures(raw, {
+              featureProjection: 'EPSG:3857',
+              dataProjection: 'EPSG:4326',
+            });
+          } else if (raw.type === 'Feature') {
+            features = [
+              geojsonFormat.readFeature(raw, {
+                featureProjection: 'EPSG:3857',
+                dataProjection: 'EPSG:4326',
+              }),
+            ];
+          } else if (raw.type && raw.coordinates) {
+            // Pure geometry object (Polygon, MultiPolygon, etc.)
+            features = [
+              geojsonFormat.readFeature(
+                {
+                  type: 'Feature',
+                  properties: {},
+                  geometry: raw,
+                },
+                {
+                  featureProjection: 'EPSG:3857',
+                  dataProjection: 'EPSG:4326',
+                }
+              ),
+            ];
+          }
         }
-      );
-      features = [polyFeature];
+      } else if (externalArea.type === 'bbox') {
+        const [west, south, east, north] = externalArea.bbox;
+        const polyFeature = geojsonFormat.readFeature(
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [west, south],
+                  [east, south],
+                  [east, north],
+                  [west, north],
+                  [west, south],
+                ],
+              ],
+            },
+          },
+          {
+            featureProjection: 'EPSG:3857',
+            dataProjection: 'EPSG:4326',
+          }
+        );
+        features = [polyFeature];
+      }
+    } catch (err) {
+      console.error('Failed to parse loaded geometry for OpenLayers:', err);
     }
 
     if (features.length > 0) {
       source.addFeatures(features);
       setHasDrawnGeometry(true);
 
+      // Force OpenLayers to recalculate viewport size when transitioning tabs
+      map.updateSize();
+
       const extent = source.getExtent();
-      if (extent && !extent.some(isNaN)) {
-        map.getView().fit(extent, {
-          padding: [50, 50, 50, 50],
-          maxZoom: 16,
-          duration: 500,
-        });
+      if (extent && !extent.some(isNaN) && extent[0] !== Infinity) {
+        setTimeout(() => {
+          map.updateSize();
+          map.getView().fit(extent, {
+            padding: [70, 70, 70, 70],
+            maxZoom: 16,
+            duration: 400,
+          });
+        }, 60);
       }
     }
   }, [externalArea]);
