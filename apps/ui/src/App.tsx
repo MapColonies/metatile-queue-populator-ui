@@ -23,15 +23,17 @@ interface TabPanelProps {
 function CustomTabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
 
+  const isSelected = value === index;
+
   return (
     <div
       role="tabpanel"
-      hidden={value !== index}
+      hidden={!isSelected}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
       style={{
         height: '100%',
-        display: value === index ? 'flex' : 'none',
+        display: isSelected ? 'flex' : 'none',
         flexDirection: 'column',
         overflowY: index === 0 ? 'hidden' : 'auto',
         overflowX: 'hidden',
@@ -39,7 +41,7 @@ function CustomTabPanel(props: TabPanelProps) {
       }}
       {...other}
     >
-      {value === index && children}
+      {(isSelected || index === 0) && children}
     </div>
   );
 }
