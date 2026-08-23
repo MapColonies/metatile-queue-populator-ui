@@ -33,7 +33,11 @@ import PublicIcon from '@mui/icons-material/Public';
 import MapIcon from '@mui/icons-material/Map';
 import FlagIcon from '@mui/icons-material/Flag';
 import StarIcon from '@mui/icons-material/Star';
+import CreateIcon from '@mui/icons-material/Create';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import axios from 'axios';
+import { SpatialDropzone } from '../components/SpatialDropzone.tsx';
+import { SelectedArea } from '../types/geometry.ts';
 
 export interface AreaPreset {
   id: string;
@@ -51,11 +55,12 @@ export interface AreaPreset {
 
 interface PresetsViewProps {
   onLoadPreset: (preset: AreaPreset) => void;
+  onNavigateToDraw?: () => void;
 }
 
 const ITEMS_PER_PAGE = 12;
 
-export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset }) => {
+export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset, onNavigateToDraw }) => {
   const [presets, setPresets] = useState<AreaPreset[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('all');
@@ -68,7 +73,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset }) => {
   const [minZoom, setMinZoom] = useState<number>(0);
   const [maxZoom, setMaxZoom] = useState<number>(10);
   const [priority, setPriority] = useState<number>(0);
-  const [bboxText, setBboxText] = useState<string>('34.0, 31.0, 35.0, 32.0');
+  const [loadedGeometry, setLoadedGeometry] = useState<SelectedArea>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPresets = async () => {
@@ -123,20 +128,10 @@ export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset }) => {
   };
 
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !loadedGeometry) return;
 
     try {
-      let area: any;
-      try {
-        const parts = bboxText.split(',').map((v) => parseFloat(v.trim()));
-        if (parts.length === 4 && !parts.some(isNaN)) {
-          area = parts;
-        } else {
-          area = JSON.parse(bboxText);
-        }
-      } catch {
-        throw new Error('Area must be a valid BBOX [minLon, minLat, maxLon, maxLat] or GeoJSON object');
-      }
+      const area = loadedGeometry.type === 'bbox' ? loadedGeometry.bbox : loadedGeometry.geojson;
 
       const payload = {
         name: name.trim(),
@@ -153,8 +148,9 @@ export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset }) => {
       setCreateDialogOpen(false);
       setName('');
       setDescription('');
+      setLoadedGeometry(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to create preset');
+      setError(err.response?.data?.message || err.message || 'Failed to create preset');
     }
   };
 
@@ -363,7 +359,7 @@ export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset }) => {
       <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create New Area Preset</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+          <Stack spacing={2.5} sx={{ mt: 1 }}>
             <TextField
               label="Preset Name"
               size="small"
@@ -407,22 +403,66 @@ export const PresetsView: React.FC<PresetsViewProps> = ({ onLoadPreset }) => {
                 fullWidth
               />
             </Box>
-            <TextField
-              label="Bounding Box (minLon, minLat, maxLon, maxLat) or GeoJSON"
-              size="small"
-              required
-              multiline
-              rows={3}
-              fullWidth
-              value={bboxText}
-              onChange={(e) => setBboxText(e.target.value)}
-              sx={{ fontFamily: 'monospace' }}
-            />
+
+            {/* Spatial Geometry Input Options */}
+            <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1 }}>
+                SPATIAL BOUNDARY DEFINITION
+              </Typography>
+
+              {/* Spatial File Dropzone */}
+              <SpatialDropzone onGeometryLoaded={(geom) => setLoadedGeometry(geom)} />
+
+              {/* Draw on Map Shortcut */}
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 1.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ px: 1, bgcolor: 'background.default' }}>
+                  ── OR ──
+                </Typography>
+              </Box>
+
+              <Button
+                fullWidth
+                variant="outlined"
+                color="secondary"
+                startIcon={<CreateIcon />}
+                onClick={() => {
+                  setCreateDialogOpen(false);
+                  if (onNavigateToDraw) onNavigateToDraw();
+                }}
+                sx={{ py: 1, textTransform: 'none' }}
+              >
+                Draw BBOX / Polygon on Interactive Map
+              </Button>
+
+              {/* Loaded Geometry Status */}
+              {loadedGeometry ? (
+                <Box sx={{ mt: 2, p: 1.5, bgcolor: 'rgba(76, 175, 80, 0.08)', borderRadius: 1.5, border: '1px solid rgba(76, 175, 80, 0.3)' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <CheckCircleOutlineIcon color="success" fontSize="small" />
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                      Geometry Loaded Successfully
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontFamily: 'monospace' }}>
+                    Type: {loadedGeometry.type === 'bbox' ? 'Bounding Box (BBOX)' : 'GeoJSON Polygon Feature'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontFamily: 'monospace', wordBreak: 'break-all', fontSize: '0.7rem' }}>
+                    {loadedGeometry.type === 'bbox'
+                      ? `[${loadedGeometry.bbox.map((v) => Number(v).toFixed(4)).join(', ')}]`
+                      : 'GeoJSON coordinates validated and ready'}
+                  </Typography>
+                </Box>
+              ) : (
+                <Alert severity="info" sx={{ mt: 1.5, py: 0.5, fontSize: '0.75rem' }}>
+                  Drop a Shapefile (.zip), KML, GeoJSON, or WKT above, or click "Draw on Interactive Map".
+                </Alert>
+              )}
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={!name.trim()}>
+          <Button variant="contained" onClick={handleCreate} disabled={!name.trim() || !loadedGeometry}>
             Create Preset
           </Button>
         </DialogActions>

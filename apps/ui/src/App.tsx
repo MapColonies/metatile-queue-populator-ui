@@ -160,7 +160,13 @@ export const App: React.FC = () => {
           </CustomTabPanel>
 
           <CustomTabPanel value={currentTab} index={3}>
-            <PresetsView onLoadPreset={handleLoadPreset} />
+            <PresetsView
+              onLoadPreset={handleLoadPreset}
+              onNavigateToDraw={() => {
+                setCreatorMode('area');
+                setCurrentTab(0);
+              }}
+            />
           </CustomTabPanel>
         </Box>
       </Box>
