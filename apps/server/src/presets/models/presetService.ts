@@ -45,8 +45,16 @@ export class PresetService {
       try {
         const count = await this.presetRepository.count();
         if (count === 0 && rawPresets.length > 0) {
-          this.logger.info({ msg: 'Seeding presets into PostgreSQL database', count: rawPresets.length });
-          const entities = rawPresets.map((p) => this.presetRepository!.create(p));
+          // Deduplicate presets by id
+          const seenIds = new Set<string>();
+          const uniquePresets = rawPresets.filter((p) => {
+            if (seenIds.has(p.id)) return false;
+            seenIds.add(p.id);
+            return true;
+          });
+
+          this.logger.info({ msg: 'Seeding presets into PostgreSQL database', count: uniquePresets.length });
+          const entities = uniquePresets.map((p) => this.presetRepository!.create(p));
           // Batch insert in chunks of 50
           for (let i = 0; i < entities.length; i += 50) {
             await this.presetRepository.save(entities.slice(i, i + 50));

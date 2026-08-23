@@ -107,6 +107,23 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/audit': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get system and mutation audit logs */
+    get: operations['getAuditLogs'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/presets': {
     parameters: {
       query?: never;
@@ -457,6 +474,32 @@ export interface operations {
         };
         content: {
           'application/json': Record<string, never>;
+        };
+      };
+    };
+  };
+  getAuditLogs: {
+    parameters: {
+      query?: {
+        limit?: number;
+        method?: string;
+        statusCode?: number;
+        from?: string;
+        to?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': Record<string, never>[];
         };
       };
     };

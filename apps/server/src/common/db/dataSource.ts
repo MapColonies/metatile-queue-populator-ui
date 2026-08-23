@@ -3,6 +3,7 @@ import type { ConfigType } from '../config';
 import type { Logger } from '@map-colonies/js-logger';
 import { PresetEntity } from '../../presets/models/presetEntity';
 import { HistoryEntity } from '../../history/models/historyEntity';
+import { AuditLogEntity } from '../../audit/models/auditLogEntity';
 
 export interface DataSourceWrapper {
   instance: DataSource | null;
@@ -27,7 +28,7 @@ export const createDataSource = async (config: ConfigType, logger: Logger): Prom
     schema: dbConfig.schema ?? 'public',
     synchronize: dbConfig.synchronize ?? false,
     logging: dbConfig.logging ?? false,
-    entities: [PresetEntity, HistoryEntity],
+    entities: [PresetEntity, HistoryEntity, AuditLogEntity],
     ssl: dbConfig.ssl?.enabled ? dbConfig.ssl : false,
   };
 

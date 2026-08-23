@@ -12,6 +12,7 @@ import { QUEUE_ROUTER_SYMBOL, queueRouterFactory } from './queue/routes/queueRou
 import { HISTORY_ROUTER_SYMBOL, historyRouterFactory } from './history/routes/historyRouter';
 import { PRESET_ROUTER_SYMBOL, presetRouterFactory } from './presets/routes/presetRouter';
 import { RASTER_ROUTER_SYMBOL, rasterRouterFactory } from './raster/routes/rasterRouter';
+import { AUDIT_ROUTER_SYMBOL, auditRouterFactory } from './audit/routes/auditRouter';
 import { DATA_SOURCE_SYMBOL, createDataSource } from './common/db/dataSource';
 import { getConfig } from './common/config';
 
@@ -45,6 +46,7 @@ export const registerExternalValues = async (options?: RegisterOptions): Promise
     { token: HISTORY_ROUTER_SYMBOL, provider: { useFactory: historyRouterFactory } },
     { token: PRESET_ROUTER_SYMBOL, provider: { useFactory: presetRouterFactory } },
     { token: RASTER_ROUTER_SYMBOL, provider: { useFactory: rasterRouterFactory } },
+    { token: AUDIT_ROUTER_SYMBOL, provider: { useFactory: auditRouterFactory } },
     {
       token: 'onSignal',
       provider: {

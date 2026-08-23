@@ -257,6 +257,47 @@ paths:
             application/json:
               schema:
                 type: object
+  /audit:
+    get:
+      operationId: getAuditLogs
+      tags:
+        - audit
+      summary: Get system and mutation audit logs
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: method
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: statusCode
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
   /presets:
     get:
       operationId: getPresets

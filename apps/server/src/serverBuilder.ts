@@ -16,6 +16,8 @@ import { QUEUE_ROUTER_SYMBOL } from './queue/routes/queueRouter';
 import { HISTORY_ROUTER_SYMBOL } from './history/routes/historyRouter';
 import { PRESET_ROUTER_SYMBOL } from './presets/routes/presetRouter';
 import { RASTER_ROUTER_SYMBOL } from './raster/routes/rasterRouter';
+import { AUDIT_ROUTER_SYMBOL } from './audit/routes/auditRouter';
+import { AuditService } from './audit/models/auditService';
 
 @injectable()
 export class ServerBuilder {
@@ -30,7 +32,9 @@ export class ServerBuilder {
     @inject(QUEUE_ROUTER_SYMBOL) private readonly queueRouter: Router,
     @inject(HISTORY_ROUTER_SYMBOL) private readonly historyRouter: Router,
     @inject(PRESET_ROUTER_SYMBOL) private readonly presetRouter: Router,
-    @inject(RASTER_ROUTER_SYMBOL) private readonly rasterRouter: Router
+    @inject(RASTER_ROUTER_SYMBOL) private readonly rasterRouter: Router,
+    @inject(AUDIT_ROUTER_SYMBOL) private readonly auditRouter: Router,
+    @inject(AuditService) private readonly auditService: AuditService
   ) {
     this.serverInstance = express();
   }
@@ -59,6 +63,7 @@ export class ServerBuilder {
     this.serverInstance.use('/history', this.historyRouter);
     this.serverInstance.use('/presets', this.presetRouter);
     this.serverInstance.use('/config', this.rasterRouter);
+    this.serverInstance.use('/audit', this.auditRouter);
     this.buildDocsRoutes();
   }
 
@@ -71,6 +76,33 @@ export class ServerBuilder {
     }
 
     this.serverInstance.use(json(this.config.get('server.request.payload')));
+
+    // Audit logging middleware for mutations and key actions
+    const auditService = this.auditService;
+    this.serverInstance.use((req, res, next) => {
+      const startTime = Date.now();
+      const originalEnd = res.end;
+
+      res.end = function (this: express.Response, ...args: any[]) {
+        const durationMs = Date.now() - startTime;
+        // Intercept and persist non-metrics and non-static requests into persistent audit_logs
+        if (!req.path.startsWith('/metrics') && !req.path.startsWith('/docs') && req.path !== '/favicon.ico') {
+          void auditService.logEvent({
+            method: req.method,
+            path: req.path,
+            statusCode: res.statusCode,
+            durationMs,
+            clientIp: req.ip || req.socket.remoteAddress,
+            userAgent: req.get('user-agent'),
+            requestBody: req.method !== 'GET' && req.body && Object.keys(req.body).length > 0 ? req.body : undefined,
+            queryParams: req.query && Object.keys(req.query).length > 0 ? (req.query as Record<string, any>) : undefined,
+          });
+        }
+        return (originalEnd as any).apply(this, args);
+      };
+
+      next();
+    });
 
     const ignorePathRegex = new RegExp(`^(${this.config.get('openapiConfig.basePath')}|/spatial/convert).*`, 'i');
     const apiSpecPath = this.config.get('openapiConfig.filePath');
