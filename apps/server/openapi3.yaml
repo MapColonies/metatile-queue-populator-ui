@@ -329,6 +329,35 @@ paths:
           description: OK
         '404':
           $ref: '#/components/responses/NotFound'
+  /config/raster:
+    get:
+      operationId: getRasterConfig
+      tags:
+        - config
+      summary: Get MapColonies Raster CSW and Serving configuration
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - cswUrl
+                properties:
+                  cswUrl:
+                    type: string
+                  token:
+                    type: string
+                  defaultMap:
+                    type: object
+                    properties:
+                      useOsm:
+                        type: boolean
+                      productId:
+                        type: string
+                      productType:
+                        type: string
   /tiles/list:
     post:
       operationId: postTilesList

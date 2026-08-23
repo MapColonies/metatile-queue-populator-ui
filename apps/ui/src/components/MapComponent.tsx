@@ -10,6 +10,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PanToolIcon from '@mui/icons-material/PanTool';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import GridOffIcon from '@mui/icons-material/GridOff';
+import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
 
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -21,9 +22,14 @@ import VectorSource from 'ol/source/Vector';
 import Draw, { createBox } from 'ol/interaction/Draw';
 import GeoJSON from 'ol/format/GeoJSON';
 import { Style, Fill, Stroke } from 'ol/style';
-import { fromLonLat, toLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
 import { DrawMode, SelectedArea } from '../types/geometry.ts';
+import { ActiveRasterLayer, RasterConfig, RasterRecord } from '../types/raster.ts';
+import { createWMTSLayerFromRecord } from '../services/wmtsHelper.ts';
+import { fetchRasterRecords } from '../services/cswClient.ts';
+import { LayerManager } from './LayerManager.tsx';
+import { RasterCatalogDrawer } from './RasterCatalogDrawer.tsx';
 import 'ol/ol.css';
 
 interface MapComponentProps {
@@ -46,11 +52,16 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource>(new VectorSource());
+  const osmLayerRef = useRef<TileLayer<OSM> | null>(null);
   const debugLayerRef = useRef<TileLayer<TileDebug> | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
 
   const [drawMode, setDrawMode] = useState<DrawMode>('none');
   const [showDebugLayer, setShowDebugLayer] = useState<boolean>(false);
+  const [showOsmBase, setShowOsmBase] = useState<boolean>(true);
+  const [activeRasterLayers, setActiveRasterLayers] = useState<ActiveRasterLayer[]>([]);
+  const [catalogDrawerOpen, setCatalogDrawerOpen] = useState<boolean>(false);
+  const [rasterConfig, setRasterConfig] = useState<RasterConfig | null>(null);
   const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.00000000', lat: '0.00000000' });
   const [zoomLevel, setZoomLevel] = useState<number>(7);
   const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
@@ -220,6 +231,72 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     drawInteractionRef.current = draw;
   }, [updateDrawnArea]);
 
+  // Fetch raster configuration from BFF and handle default map settings
+  useEffect(() => {
+    fetch('/api/config/raster')
+      .then((res) => (res.ok ? res.json() : null))
+      .then(async (data: RasterConfig | null) => {
+        if (data && data.cswUrl) {
+          setRasterConfig(data);
+
+          // Configure OSM base map default visibility from config
+          if (data.defaultMap?.useOsm !== undefined) {
+            setShowOsmBase(Boolean(data.defaultMap.useOsm));
+          }
+
+          // If defaultMap specifies a MapColonies layer (productId / productType), query CSW and load it
+          if (data.defaultMap?.productId) {
+            try {
+              const queryResult = await fetchRasterRecords({
+                cswUrl: data.cswUrl,
+                token: data.token,
+                productId: data.defaultMap.productId,
+                productType: data.defaultMap.productType || undefined,
+                maxRecords: 1,
+              });
+
+              if (queryResult.records.length > 0) {
+                const defaultRecord = queryResult.records[0];
+                const activeLayer = await createWMTSLayerFromRecord({
+                  record: defaultRecord,
+                  token: data.token,
+                  zIndex: 1,
+                  opacity: 1.0,
+                });
+
+                if (mapRef.current) {
+                  mapRef.current.addLayer(activeLayer.olLayer);
+                  setActiveRasterLayers([activeLayer]);
+
+                  // If bbox exists, center on the default map layer
+                  if (activeLayer.extent) {
+                    mapRef.current.getView().fit(activeLayer.extent, {
+                      padding: [50, 50, 50, 50],
+                      maxZoom: 14,
+                      duration: 500,
+                    });
+                  }
+                }
+              } else {
+                console.warn(`Default map with productId "${data.defaultMap.productId}" not found in CSW catalog.`);
+              }
+            } catch (err) {
+              console.error('Failed to auto-load configured default MapColonies raster layer:', err);
+            }
+          }
+        }
+      })
+      .catch((err) => console.warn('Could not fetch raster config from BFF:', err));
+  }, []);
+
+  // Sync OSM Base Layer visibility
+  useEffect(() => {
+    if (osmLayerRef.current) {
+      osmLayerRef.current.setVisible(showOsmBase);
+    }
+  }, [showOsmBase]);
+
+  // Sync Debug Tile Scheme Layer visibility
   useEffect(() => {
     if (debugLayerRef.current) {
       debugLayerRef.current.setVisible(showDebugLayer);
@@ -243,23 +320,27 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     const vectorLayer = new VectorLayer({
       source: vectorSourceRef.current,
       style: vectorStyle,
-      zIndex: 10,
+      zIndex: 100, // Always on top of all raster layers
     });
 
     const debugLayer = new TileLayer({
       source: new TileDebug(),
       visible: showDebugLayer,
-      zIndex: 5,
+      zIndex: 50,
     });
     debugLayerRef.current = debugLayer;
+
+    const osmLayer = new TileLayer({
+      source: new OSM(),
+      zIndex: 0,
+      visible: showOsmBase,
+    });
+    osmLayerRef.current = osmLayer;
 
     const map = new Map({
       target: mapElement.current,
       layers: [
-        new TileLayer({
-          source: new OSM(),
-          zIndex: 1,
-        }),
+        osmLayer,
         debugLayer,
         vectorLayer,
       ],
@@ -302,6 +383,111 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     };
   }, []);
 
+  // Handler: Add raster layer to map
+  const handleAddRasterLayer = async (record: RasterRecord) => {
+    const map = mapRef.current;
+    if (!map) {
+      console.error('Map is not initialized yet');
+      throw new Error('Map is not initialized');
+    }
+
+    // Check if layer already exists
+    if (activeRasterLayers.some((l) => l.id === record.id)) return;
+
+    try {
+      const zIndex = activeRasterLayers.length + 1;
+      const activeLayer = await createWMTSLayerFromRecord({
+        record,
+        token: rasterConfig?.token,
+        zIndex,
+        opacity: 1.0,
+      });
+
+      map.addLayer(activeLayer.olLayer);
+      setActiveRasterLayers((prev) => [activeLayer, ...prev]);
+    } catch (err: any) {
+      console.error(`Error adding raster layer "${record.productName}":`, err);
+      throw err;
+    }
+  };
+
+  // Handler: Remove raster layer from map
+  const handleRemoveRasterLayer = (layerId: string) => {
+    const map = mapRef.current;
+    const target = activeRasterLayers.find((l) => l.id === layerId);
+    if (map && target?.olLayer) {
+      map.removeLayer(target.olLayer);
+    }
+    setActiveRasterLayers((prev) => prev.filter((l) => l.id !== layerId));
+  };
+
+  // Handler: Update raster layer opacity
+  const handleUpdateLayerOpacity = (layerId: string, opacity: number) => {
+    setActiveRasterLayers((prev) =>
+      prev.map((l) => {
+        if (l.id === layerId) {
+          if (l.olLayer) {
+            l.olLayer.setOpacity(opacity);
+          }
+          return { ...l, opacity };
+        }
+        return l;
+      })
+    );
+  };
+
+  // Handler: Toggle raster layer visibility
+  const handleToggleLayerVisibility = (layerId: string) => {
+    setActiveRasterLayers((prev) =>
+      prev.map((l) => {
+        if (l.id === layerId) {
+          const nextVis = !l.visible;
+          if (l.olLayer) {
+            l.olLayer.setVisible(nextVis);
+          }
+          return { ...l, visible: nextVis };
+        }
+        return l;
+      })
+    );
+  };
+
+  // Handler: Reorder raster layers (update zIndex)
+  const handleReorderLayers = (newLayers: ActiveRasterLayer[]) => {
+    newLayers.forEach((layer) => {
+      if (layer.olLayer) {
+        layer.olLayer.setZIndex(layer.zIndex);
+      }
+    });
+    setActiveRasterLayers(newLayers);
+  };
+
+  // Handler: Zoom map to raster layer bounds
+  const handleZoomToLayer = (layer: ActiveRasterLayer | RasterRecord) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    let extent3857: [number, number, number, number] | undefined = undefined;
+
+    if ('extent' in layer && layer.extent) {
+      extent3857 = layer.extent;
+    } else if ('bbox' in layer && layer.bbox) {
+      try {
+        extent3857 = transformExtent(layer.bbox, 'EPSG:4326', 'EPSG:3857') as [number, number, number, number];
+      } catch (e) {
+        console.warn('Failed to transform bbox to 3857:', e);
+      }
+    }
+
+    if (extent3857 && !extent3857.some(isNaN) && extent3857[0] !== Infinity) {
+      map.getView().fit(extent3857, {
+        padding: [60, 60, 60, 60],
+        maxZoom: 16,
+        duration: 500,
+      });
+    }
+  };
+
   const handleClearArea = () => {
     vectorSourceRef.current.clear();
     setHasDrawnGeometry(false);
@@ -309,50 +495,57 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   };
 
   const handleZoomIn = () => {
-    const view = mapRef.current?.getView();
-    if (view) {
-      const zoom = view.getZoom();
-      if (zoom !== undefined) view.animate({ zoom: zoom + 1, duration: 250 });
-    }
+    const map = mapRef.current;
+    if (!map) return;
+    const view = map.getView();
+    view.animate({ zoom: (view.getZoom() || 7) + 1, duration: 250 });
   };
 
   const handleZoomOut = () => {
-    const view = mapRef.current?.getView();
-    if (view) {
-      const zoom = view.getZoom();
-      if (zoom !== undefined) view.animate({ zoom: zoom - 1, duration: 250 });
-    }
+    const map = mapRef.current;
+    if (!map) return;
+    const view = map.getView();
+    view.animate({ zoom: (view.getZoom() || 7) - 1, duration: 250 });
   };
 
   const handleResetView = () => {
-    const view = mapRef.current?.getView();
-    if (view) {
-      view.animate({
-        center: fromLonLat([34.7818, 32.0853]),
-        zoom: 7,
-        duration: 400,
-      });
-    }
+    const map = mapRef.current;
+    if (!map) return;
+    map.getView().animate({
+      center: fromLonLat([34.7818, 32.0853]),
+      zoom: 7,
+      duration: 500,
+    });
   };
 
   const handleFullScreen = () => {
-    if (mapElement.current?.parentElement) {
-      if (!document.fullscreenElement) {
-        mapElement.current.parentElement.requestFullscreen();
-      } else {
-        document.exitFullscreen();
-      }
+    if (!document.fullscreenElement) {
+      mapElement.current?.requestFullscreen().catch((err) => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen();
     }
   };
 
   return (
-    <Box sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: 1 }}>
-      {/* Map Canvas */}
-      <div ref={mapElement} style={{ width: '100%', height: '100%', background: '#1c242c' }} />
+    <Box sx={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+      {/* Map DOM Container */}
+      <div
+        ref={mapElement}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          background: '#1c242c',
+        }}
+      />
 
-      {/* Drawing Toolbar (Top Left) */}
+      {/* Map Drawing Controls (Top Left) */}
       <Paper
-        elevation={4}
+        elevation={3}
         sx={{
           position: 'absolute',
           top: 16,
@@ -360,21 +553,22 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
           display: 'flex',
           alignItems: 'center',
           p: 0.5,
-          bgcolor: 'rgba(26, 34, 40, 0.92)',
-          backdropFilter: 'blur(6px)',
+          bgcolor: 'rgba(26, 34, 40, 0.9)',
+          backdropFilter: 'blur(4px)',
           border: '1px solid',
           borderColor: 'divider',
           zIndex: 10,
-          borderRadius: 2,
         }}
       >
         <ToggleButtonGroup
+          size="small"
           value={drawMode}
           exclusive
-          onChange={(_e, newMode) => {
-            if (newMode !== null) setDrawMode(newMode);
+          onChange={(_, newMode) => {
+            if (newMode !== null) {
+              setDrawMode(newMode);
+            }
           }}
-          size="small"
           aria-label="map drawing tools"
         >
           <ToggleButton value="none" aria-label="pan map">
@@ -411,6 +605,19 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
         </Tooltip>
       </Paper>
 
+      {/* Floating Layer Manager (Top Left beside draw toolbar) */}
+      <LayerManager
+        showOsmBase={showOsmBase}
+        onToggleOsmBase={setShowOsmBase}
+        activeLayers={activeRasterLayers}
+        onReorderLayers={handleReorderLayers}
+        onUpdateLayerOpacity={handleUpdateLayerOpacity}
+        onToggleLayerVisibility={handleToggleLayerVisibility}
+        onRemoveLayer={handleRemoveRasterLayer}
+        onZoomToLayer={handleZoomToLayer}
+        onOpenCatalog={() => setCatalogDrawerOpen(true)}
+      />
+
       {/* Navigation Toolbar (Top Right) */}
       <Paper
         elevation={3}
@@ -428,6 +635,15 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
         }}
       >
         <ButtonGroup orientation="vertical" size="small" variant="text">
+          <Tooltip title="Open MapColonies Raster Catalog" placement="left">
+            <IconButton
+              onClick={() => setCatalogDrawerOpen(true)}
+              size="small"
+              color={activeRasterLayers.length > 0 ? "secondary" : "primary"}
+            >
+              <CollectionsBookmarkIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={showDebugLayer ? "Hide Tile Scheme (Debug Grid)" : "Show Tile Scheme (Debug Grid)"} placement="left">
             <IconButton
               onClick={() => setShowDebugLayer((prev) => !prev)}
@@ -459,6 +675,17 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
           </Tooltip>
         </ButtonGroup>
       </Paper>
+
+      {/* Raster Catalog Drawer */}
+      <RasterCatalogDrawer
+        open={catalogDrawerOpen}
+        onClose={() => setCatalogDrawerOpen(false)}
+        rasterConfig={rasterConfig}
+        activeLayers={activeRasterLayers}
+        onAddLayer={handleAddRasterLayer}
+        onRemoveLayer={handleRemoveRasterLayer}
+        onZoomToLayerExtent={handleZoomToLayer}
+      />
 
       {/* Bottom Coordinates & Mode Info */}
       <Paper

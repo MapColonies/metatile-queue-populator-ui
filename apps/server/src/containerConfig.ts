@@ -11,6 +11,7 @@ import { SPATIAL_ROUTER_SYMBOL, spatialRouterFactory } from './spatial/routes/sp
 import { QUEUE_ROUTER_SYMBOL, queueRouterFactory } from './queue/routes/queueRouter';
 import { HISTORY_ROUTER_SYMBOL, historyRouterFactory } from './history/routes/historyRouter';
 import { PRESET_ROUTER_SYMBOL, presetRouterFactory } from './presets/routes/presetRouter';
+import { RASTER_ROUTER_SYMBOL, rasterRouterFactory } from './raster/routes/rasterRouter';
 import { DATA_SOURCE_SYMBOL, createDataSource } from './common/db/dataSource';
 import { getConfig } from './common/config';
 
@@ -43,6 +44,7 @@ export const registerExternalValues = async (options?: RegisterOptions): Promise
     { token: QUEUE_ROUTER_SYMBOL, provider: { useFactory: queueRouterFactory } },
     { token: HISTORY_ROUTER_SYMBOL, provider: { useFactory: historyRouterFactory } },
     { token: PRESET_ROUTER_SYMBOL, provider: { useFactory: presetRouterFactory } },
+    { token: RASTER_ROUTER_SYMBOL, provider: { useFactory: rasterRouterFactory } },
     {
       token: 'onSignal',
       provider: {

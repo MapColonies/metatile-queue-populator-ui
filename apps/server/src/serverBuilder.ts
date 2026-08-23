@@ -15,6 +15,7 @@ import { SPATIAL_ROUTER_SYMBOL } from './spatial/routes/spatialRouter';
 import { QUEUE_ROUTER_SYMBOL } from './queue/routes/queueRouter';
 import { HISTORY_ROUTER_SYMBOL } from './history/routes/historyRouter';
 import { PRESET_ROUTER_SYMBOL } from './presets/routes/presetRouter';
+import { RASTER_ROUTER_SYMBOL } from './raster/routes/rasterRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -28,7 +29,8 @@ export class ServerBuilder {
     @inject(SPATIAL_ROUTER_SYMBOL) private readonly spatialRouter: Router,
     @inject(QUEUE_ROUTER_SYMBOL) private readonly queueRouter: Router,
     @inject(HISTORY_ROUTER_SYMBOL) private readonly historyRouter: Router,
-    @inject(PRESET_ROUTER_SYMBOL) private readonly presetRouter: Router
+    @inject(PRESET_ROUTER_SYMBOL) private readonly presetRouter: Router,
+    @inject(RASTER_ROUTER_SYMBOL) private readonly rasterRouter: Router
   ) {
     this.serverInstance = express();
   }
@@ -56,6 +58,7 @@ export class ServerBuilder {
     this.serverInstance.use('/queue', this.queueRouter);
     this.serverInstance.use('/history', this.historyRouter);
     this.serverInstance.use('/presets', this.presetRouter);
+    this.serverInstance.use('/config', this.rasterRouter);
     this.buildDocsRoutes();
   }
 

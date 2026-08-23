@@ -49,8 +49,8 @@ export class QueueStatusService {
 
     try {
       const dbConfig = (this.config.get as any)('db');
-      if (dbConfig) {
-        this.pgbossInstance = new PgBoss({
+      if (dbConfig && dbConfig.host) {
+        const instance = new PgBoss({
           host: dbConfig.host,
           port: dbConfig.port,
           user: dbConfig.username,
@@ -59,6 +59,13 @@ export class QueueStatusService {
           schema: dbConfig.schema ?? 'pgboss',
           application_name: 'metatile-queue-populator-ui',
         });
+
+        // Attach error event listener so background pool connection timeouts do not crash the process
+        instance.on('error', (err: any) => {
+          this.logger.warn({ msg: 'PgBoss background error encountered', error: err.message });
+        });
+
+        this.pgbossInstance = instance;
         return this.pgbossInstance;
       }
     } catch (err: any) {

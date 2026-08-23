@@ -142,6 +142,23 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/config/raster': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get MapColonies Raster CSW and Serving configuration */
+    get: operations['getRasterConfig'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/tiles/list': {
     parameters: {
       query?: never;
@@ -514,6 +531,34 @@ export interface operations {
         content?: never;
       };
       404: components['responses']['NotFound'];
+    };
+  };
+  getRasterConfig: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            cswUrl: string;
+            token?: string;
+            defaultMap?: {
+              useOsm?: boolean;
+              productId?: string;
+              productType?: string;
+            };
+          };
+        };
+      };
     };
   };
   postTilesList: {
