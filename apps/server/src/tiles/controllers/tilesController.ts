@@ -37,9 +37,9 @@ export class TilesController {
     }
   };
 
-  public postEstimateTiles: PostTilesEstimateHandler = (req, res, next) => {
+  public postEstimateTiles: PostTilesEstimateHandler = async (req, res, next) => {
     try {
-      const result = this.estimationService.estimateTiles(req.body);
+      const result = await this.estimationService.estimateTiles(req.body);
       return res.status(httpStatus.OK).json(result);
     } catch (error) {
       return next(error);

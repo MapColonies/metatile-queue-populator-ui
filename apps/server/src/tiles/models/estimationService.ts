@@ -1,8 +1,9 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import { BoundingBox, lonLatZoomToTile, tileToBoundingBox, Tile } from '@map-colonies/tile-calc';
-import * as turf from '@turf/turf';
-import type { Feature, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
+import { Worker } from 'worker_threads';
+import { resolve } from 'path';
+import { existsSync } from 'fs';
+import type { Feature, FeatureCollection } from 'geojson';
 import { SERVICES } from '../../common/constants';
 import type { ConfigType } from '../../common/config';
 import { HttpError } from '../../common/errors';
@@ -28,7 +29,7 @@ export interface EstimateRequest {
   metatile?: number;
 }
 
-const MAX_CALCULATION_TIME_MS = 25000; // 25s timeout limit for estimation loop
+const MAX_CALCULATION_TIME_MS = 30000; // 30s timeout limit
 
 @injectable()
 export class TileEstimationService {
@@ -45,8 +46,7 @@ export class TileEstimationService {
     }
   }
 
-  public estimateTiles(request: EstimateRequest): EstimationResult {
-    const startTime = Date.now();
+  public async estimateTiles(request: EstimateRequest): Promise<EstimationResult> {
     const { minZoom, maxZoom, area } = request;
     const metatile = request.metatile ?? this.defaultMetatile;
 
@@ -54,163 +54,75 @@ export class TileEstimationService {
       throw new HttpError('Invalid zoom level range (minZoom and maxZoom must be between 0 and 18)', httpStatus.BAD_REQUEST);
     }
 
-    const { boundingBox: geomBbox, targetPolygons, isGeojson } = this.extractBboxAndPolygons(area);
+    const workerPath = this.resolveWorkerPath();
 
-    const breakdown: ZoomEstimation[] = [];
-    let totalMetatiles = 0;
-
-    for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
-      if (Date.now() - startTime > MAX_CALCULATION_TIME_MS) {
-        this.logger.warn({ msg: 'Tile estimation exceeded 25s execution timeout limit', minZoom, maxZoom });
-        throw new HttpError('Calculation timed out after 30 seconds due to extremely large spatial query area and high zoom levels. Please reduce maxZoom or use BBOX.', httpStatus.REQUEST_TIMEOUT);
-      }
-
-      const upperLeft = lonLatZoomToTile({ lon: geomBbox.west, lat: geomBbox.north }, zoom, metatile);
-      const lowerRight = lonLatZoomToTile({ lon: geomBbox.east, lat: geomBbox.south }, zoom, metatile);
-
-      const totalBboxCols = Math.max(0, lowerRight.x - upperLeft.x + 1);
-      const totalBboxRows = Math.max(0, lowerRight.y - upperLeft.y + 1);
-      const bboxCandidateCount = totalBboxCols * totalBboxRows;
-
-      let zoomMetatiles = 0;
-
-      if (!isGeojson || targetPolygons.length === 0) {
-        // Pure BBOX formula
-        zoomMetatiles = bboxCandidateCount;
-      } else {
-        // Fast pre-filter against each polygon's bbox
-        const polygonWithBboxes = targetPolygons.map((poly) => ({
-          poly,
-          bbox: turf.bbox(poly), // [minX, minY, maxX, maxY]
-        }));
-
-        for (let y = upperLeft.y; y <= lowerRight.y; y++) {
-          // Timeout check inside heavy loops
-          if (Date.now() - startTime > MAX_CALCULATION_TIME_MS) {
-            this.logger.warn({ msg: 'Tile estimation exceeded 25s execution timeout limit in zoom loop', zoom, minZoom, maxZoom });
-            throw new HttpError('Calculation timed out after 30 seconds due to extremely large spatial query area. Please refine zoom range or select a smaller area.', httpStatus.REQUEST_TIMEOUT);
-          }
-
-          for (let x = upperLeft.x; x <= lowerRight.x; x++) {
-            const candidateTile: Tile = { x, y, z: zoom, metatile };
-            const tileBbox = tileToBoundingBox(candidateTile);
-
-            // Bounding box overlap filter first before expensive geometry intersection
-            let intersects = false;
-            for (const { poly, bbox } of polygonWithBboxes) {
-              if (
-                tileBbox.east < bbox[0] ||
-                tileBbox.west > bbox[2] ||
-                tileBbox.north < bbox[1] ||
-                tileBbox.south > bbox[3]
-              ) {
-                continue; // No AABB overlap
-              }
-
-              const tilePoly = this.boundingBoxToPolygonFeature(tileBbox);
-              if (turf.booleanIntersects(tilePoly as Feature<Polygon>, poly)) {
-                intersects = true;
-                break;
-              }
-            }
-
-            if (intersects) {
-              zoomMetatiles++;
-            }
-          }
-        }
-      }
-
-      const standardTilesPerMetatile = metatile * metatile;
-      const zoomTiles = zoomMetatiles * standardTilesPerMetatile;
-
-      breakdown.push({
-        zoom,
-        metatiles: zoomMetatiles,
-        tiles: zoomTiles,
+    return new Promise<EstimationResult>((resolvePromise, rejectPromise) => {
+      const worker = new Worker(workerPath, {
+        workerData: {
+          area,
+          minZoom,
+          maxZoom,
+          metatile,
+          timeoutMs: MAX_CALCULATION_TIME_MS,
+        },
       });
 
-      totalMetatiles += zoomMetatiles;
-    }
+      const killTimeout = setTimeout(() => {
+        worker.terminate().catch(() => null);
+        this.logger.warn({ msg: 'Terminated worker thread due to 30s timeout', minZoom, maxZoom });
+        rejectPromise(
+          new HttpError(
+            'Calculation timed out after 30 seconds due to extremely large spatial query area. Please refine zoom range or select a smaller area.',
+            httpStatus.REQUEST_TIMEOUT
+          )
+        );
+      }, MAX_CALCULATION_TIME_MS);
 
-    const totalTiles = totalMetatiles * (metatile * metatile);
-
-    return {
-      totalMetatiles,
-      totalTiles,
-      metatileSize: metatile,
-      breakdown,
-    };
-  }
-
-  private extractBboxAndPolygons(area: EstimateRequest['area']): {
-    boundingBox: BoundingBox;
-    targetPolygons: Feature<Polygon | MultiPolygon>[];
-    isGeojson: boolean;
-  } {
-    if (Array.isArray(area) && area.length === 4) {
-      return {
-        boundingBox: { west: area[0], south: area[1], east: area[2], north: area[3] },
-        targetPolygons: [],
-        isGeojson: false,
-      };
-    }
-
-    const geojsonObj = area as any;
-    const computedBbox = turf.bbox(geojsonObj);
-    const boundingBox = {
-      west: computedBbox[0],
-      south: computedBbox[1],
-      east: computedBbox[2],
-      north: computedBbox[3],
-    };
-
-    const targetPolygons: Feature<Polygon | MultiPolygon>[] = [];
-
-    if (geojsonObj.type === 'FeatureCollection') {
-      const fc = geojsonObj as FeatureCollection;
-      if (Array.isArray(fc.features)) {
-        for (const feat of fc.features) {
-          if (feat.geometry?.type === 'Polygon' || feat.geometry?.type === 'MultiPolygon') {
-            targetPolygons.push(feat as Feature<Polygon | MultiPolygon>);
-          }
+      worker.on('message', (msg: any) => {
+        clearTimeout(killTimeout);
+        if (msg.success) {
+          resolvePromise(msg.result);
+        } else if (msg.isTimeout) {
+          rejectPromise(
+            new HttpError(
+              'Calculation timed out after 30 seconds due to extremely large spatial query area. Please refine zoom range or select a smaller area.',
+              httpStatus.REQUEST_TIMEOUT
+            )
+          );
+        } else {
+          rejectPromise(new HttpError(msg.error || 'Tile estimation failed', httpStatus.INTERNAL_SERVER_ERROR));
         }
-      }
-    } else if (geojsonObj.type === 'Feature') {
-      if (geojsonObj.geometry?.type === 'Polygon' || geojsonObj.geometry?.type === 'MultiPolygon') {
-        targetPolygons.push(geojsonObj as Feature<Polygon | MultiPolygon>);
-      }
-    } else if (geojsonObj.type === 'Polygon' || geojsonObj.type === 'MultiPolygon') {
-      targetPolygons.push({
-        type: 'Feature',
-        properties: {},
-        geometry: geojsonObj,
       });
-    }
 
-    return {
-      boundingBox,
-      targetPolygons,
-      isGeojson: targetPolygons.length > 0,
-    };
+      worker.on('error', (err: any) => {
+        clearTimeout(killTimeout);
+        this.logger.error({ msg: 'Worker thread error during tile estimation', err: err.message });
+        rejectPromise(new HttpError('Internal error during tile estimation', httpStatus.INTERNAL_SERVER_ERROR));
+      });
+
+      worker.on('exit', (code) => {
+        clearTimeout(killTimeout);
+        if (code !== 0) {
+          rejectPromise(new HttpError(`Worker thread stopped with exit code ${code}`, httpStatus.INTERNAL_SERVER_ERROR));
+        }
+      });
+    });
   }
 
-  private boundingBoxToPolygonFeature(bbox: BoundingBox): Feature<Polygon> {
-    return {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [bbox.west, bbox.south],
-            [bbox.east, bbox.south],
-            [bbox.east, bbox.north],
-            [bbox.west, bbox.north],
-            [bbox.west, bbox.south],
-          ],
-        ],
-      },
-    };
+  private resolveWorkerPath(): string {
+    const candidates = [
+      resolve(__dirname, './estimationWorker.js'),
+      resolve(__dirname, './estimationWorker.ts'),
+      resolve(process.cwd(), 'dist/tiles/models/estimationWorker.js'),
+      resolve(process.cwd(), 'src/tiles/models/estimationWorker.ts'),
+    ];
+
+    for (const p of candidates) {
+      if (existsSync(p)) {
+        return p;
+      }
+    }
+
+    return resolve(__dirname, './estimationWorker.js');
   }
 }
