@@ -77,6 +77,20 @@ export class ServerBuilder {
 
     this.serverInstance.use(json(this.config.get('server.request.payload')));
 
+    // 30-second request timeout handler
+    this.serverInstance.use((req, res, next) => {
+      const timeout = setTimeout(() => {
+        if (!res.headersSent) {
+          this.logger.warn({ msg: 'Request timed out after 30s', path: req.path, method: req.method });
+          res.status(504).json({ message: 'Request timed out after 30 seconds' });
+        }
+      }, 30000);
+
+      res.on('finish', () => clearTimeout(timeout));
+      res.on('close', () => clearTimeout(timeout));
+      next();
+    });
+
     // Audit logging middleware for mutations and key actions
     const auditService = this.auditService;
     this.serverInstance.use((req, res, next) => {
