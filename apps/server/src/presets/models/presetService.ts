@@ -44,7 +44,7 @@ export class PresetService {
     if (this.presetRepository) {
       try {
         const count = await this.presetRepository.count();
-        if (count === 0 && rawPresets.length > 0) {
+        if (rawPresets.length > 0) {
           // Deduplicate presets by id
           const seenIds = new Set<string>();
           const uniquePresets = rawPresets.filter((p) => {
@@ -53,13 +53,25 @@ export class PresetService {
             return true;
           });
 
-          this.logger.info({ msg: 'Seeding presets into PostgreSQL database', count: uniquePresets.length });
-          const entities = uniquePresets.map((p) => this.presetRepository!.create(p));
-          // Batch insert in chunks of 50
-          for (let i = 0; i < entities.length; i += 50) {
-            await this.presetRepository.save(entities.slice(i, i + 50));
+          if (count === 0) {
+            this.logger.info({ msg: 'Seeding presets into PostgreSQL database', count: uniquePresets.length });
+            const entities = uniquePresets.map((p) => this.presetRepository!.create(p));
+            // Batch insert in chunks of 50
+            for (let i = 0; i < entities.length; i += 50) {
+              await this.presetRepository.save(entities.slice(i, i + 50));
+            }
+            this.logger.info({ msg: 'Successfully seeded global presets into PostgreSQL' });
+          } else {
+            // Upsert any missing presets from bundle (e.g. newly added Middle East subregion)
+            for (const p of uniquePresets) {
+              const existing = await this.presetRepository.findOne({ where: { id: p.id } });
+              if (!existing) {
+                const entity = this.presetRepository.create(p);
+                await this.presetRepository.save(entity);
+                this.logger.info({ msg: 'Inserted missing bundle preset into database', presetId: p.id, name: p.name });
+              }
+            }
           }
-          this.logger.info({ msg: 'Successfully seeded global presets into PostgreSQL' });
         }
         return;
       } catch (err: any) {
