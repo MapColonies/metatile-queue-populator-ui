@@ -1,5 +1,21 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Box, Paper, Typography, IconButton, Tooltip, ButtonGroup, Chip, Divider, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import {
+  Box,
+  Paper,
+  Typography,
+  IconButton,
+  Tooltip,
+  ButtonGroup,
+  Chip,
+  ToggleButtonGroup,
+  ToggleButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Snackbar,
+  Alert,
+} from '@mui/material';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
@@ -11,6 +27,10 @@ import PanToolIcon from '@mui/icons-material/PanTool';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import GridOffIcon from '@mui/icons-material/GridOff';
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CodeIcon from '@mui/icons-material/Code';
+import MapIcon from '@mui/icons-material/Map';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -21,6 +41,9 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import Draw, { createBox } from 'ol/interaction/Draw';
 import GeoJSON from 'ol/format/GeoJSON';
+import WKT from 'ol/format/WKT';
+import KML from 'ol/format/KML';
+import Feature from 'ol/Feature';
 import { Style, Fill, Stroke } from 'ol/style';
 import { fromLonLat, toLonLat, transformExtent } from 'ol/proj';
 import { defaults as defaultControls } from 'ol/control';
@@ -38,6 +61,12 @@ interface MapComponentProps {
   onMapReady?: (map: Map) => void;
 }
 
+interface ContextMenuState {
+  mouseX: number;
+  mouseY: number;
+  feature: Feature;
+}
+
 const vectorStyle = new Style({
   fill: new Fill({
     color: 'rgba(0, 163, 224, 0.25)', // Primary accent translucent
@@ -48,10 +77,22 @@ const vectorStyle = new Style({
   }),
 });
 
+const hoverStyle = new Style({
+  fill: new Fill({
+    color: 'rgba(0, 163, 224, 0.45)', // Brighter fill on hover
+  }),
+  stroke: new Stroke({
+    color: '#33c2ff',
+    width: 3.5,
+  }),
+});
+
 export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onAreaSelected, onMapReady }) => {
   const mapElement = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource>(new VectorSource());
+  const vectorLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const hoveredFeatureRef = useRef<Feature | null>(null);
   const osmLayerRef = useRef<TileLayer<OSM> | null>(null);
   const debugLayerRef = useRef<TileLayer<TileDebug> | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
@@ -65,6 +106,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   const [coordinates, setCoordinates] = useState<{ lon: string; lat: string }>({ lon: '0.00000000', lat: '0.00000000' });
   const [zoomLevel, setZoomLevel] = useState<number>(7);
   const [hasDrawnGeometry, setHasDrawnGeometry] = useState<boolean>(false);
+
+  // Right-click Context Menu & Copy notification
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   // Sync external loaded area (e.g. from File Dropzone, Preset, or Tab Clear)
   useEffect(() => {
@@ -105,15 +150,11 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
                 dataProjection: 'EPSG:4326',
               }),
             ];
-          } else if (raw.type && raw.coordinates) {
-            // Pure geometry object (Polygon, MultiPolygon, etc.)
+          } else {
+            // Raw Geometry
             features = [
               geojsonFormat.readFeature(
-                {
-                  type: 'Feature',
-                  properties: {},
-                  geometry: raw,
-                },
+                { type: 'Feature', properties: {}, geometry: raw },
                 {
                   featureProjection: 'EPSG:3857',
                   dataProjection: 'EPSG:4326',
@@ -122,31 +163,29 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
             ];
           }
         }
-      } else if (externalArea.type === 'bbox') {
-        const [west, south, east, north] = externalArea.bbox;
-        const polyFeature = geojsonFormat.readFeature(
-          {
-            type: 'Feature',
-            properties: {},
-            geometry: {
+      } else if (externalArea.type === 'bbox' && externalArea.bbox) {
+        const b = externalArea.bbox;
+        const feature = new Feature({
+          geometry: new GeoJSON().readGeometry(
+            {
               type: 'Polygon',
               coordinates: [
                 [
-                  [west, south],
-                  [east, south],
-                  [east, north],
-                  [west, north],
-                  [west, south],
+                  [b[0], b[1]],
+                  [b[2], b[1]],
+                  [b[2], b[3]],
+                  [b[0], b[3]],
+                  [b[0], b[1]],
                 ],
               ],
             },
-          },
-          {
-            featureProjection: 'EPSG:3857',
-            dataProjection: 'EPSG:4326',
-          }
-        );
-        features = [polyFeature];
+            {
+              featureProjection: 'EPSG:3857',
+              dataProjection: 'EPSG:4326',
+            }
+          ),
+        });
+        features = [feature];
       }
     } catch (err) {
       console.error('Failed to parse loaded geometry for OpenLayers:', err);
@@ -248,54 +287,47 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
   // Fetch raster configuration from BFF and handle default map settings
   useEffect(() => {
     fetch('/api/config/raster')
-      .then((res) => (res.ok ? res.json() : null))
-      .then(async (data: RasterConfig | null) => {
-        if (data && data.cswUrl) {
-          setRasterConfig(data);
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then(async (config: RasterConfig) => {
+        setRasterConfig(config);
 
-          // Configure OSM base map default visibility from config
-          if (data.defaultMap?.useOsm !== undefined) {
-            setShowOsmBase(Boolean(data.defaultMap.useOsm));
+        // Check configured default map preference
+        if (config.defaultMap) {
+          const { useOsm, productId, productType } = config.defaultMap;
+
+          // Configure OSM visibility
+          if (useOsm !== undefined) {
+            setShowOsmBase(useOsm);
           }
 
-          // If defaultMap specifies a MapColonies layer (productId / productType), query CSW and load it
-          if (data.defaultMap?.productId) {
+          // If a custom default MapColonies raster is specified, search and load it
+          if (productId && productType) {
             try {
               const queryResult = await fetchRasterRecords({
-                cswUrl: data.cswUrl,
-                token: data.token,
-                productId: data.defaultMap.productId,
-                productType: data.defaultMap.productType || undefined,
-                maxRecords: 1,
+                cswUrl: config.cswUrl,
+                token: config.token,
+                startPosition: 1,
+                maxRecords: 100,
               });
+              const targetRecord = queryResult.records.find(
+                (r: RasterRecord) =>
+                  r.productId?.toLowerCase() === productId.toLowerCase() &&
+                  r.productType?.toLowerCase() === productType.toLowerCase()
+              );
 
-              if (queryResult.records.length > 0) {
-                const defaultRecord = queryResult.records[0];
-                const activeLayer = await createWMTSLayerFromRecord({
-                  record: defaultRecord,
-                  token: data.token,
+              if (targetRecord && mapRef.current) {
+                // Initialize default custom raster layer
+                const layer = await createWMTSLayerFromRecord({
+                  record: targetRecord,
+                  token: config.token,
                   zIndex: 1,
                   opacity: 1.0,
                 });
-
-                if (mapRef.current) {
-                  mapRef.current.addLayer(activeLayer.olLayer);
-                  setActiveRasterLayers([activeLayer]);
-
-                  // If bbox exists, center on the default map layer
-                  if (activeLayer.extent) {
-                    mapRef.current.getView().fit(activeLayer.extent, {
-                      padding: [50, 50, 50, 50],
-                      maxZoom: 14,
-                      duration: 500,
-                    });
-                  }
-                }
-              } else {
-                console.warn(`Default map with productId "${data.defaultMap.productId}" not found in CSW catalog.`);
+                mapRef.current.addLayer(layer.olLayer);
+                setActiveRasterLayers([layer]);
               }
             } catch (err) {
-              console.error('Failed to auto-load configured default MapColonies raster layer:', err);
+              console.warn('Failed to load configured default MapColonies raster layer:', err);
             }
           }
         }
@@ -321,6 +353,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     setDrawingInteraction(drawMode);
   }, [drawMode, setDrawingInteraction]);
 
+  // Initialize Map
   useEffect(() => {
     if (!mapElement.current || mapRef.current) return;
 
@@ -336,6 +369,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
       style: vectorStyle,
       zIndex: 100, // Always on top of all raster layers
     });
+    vectorLayerRef.current = vectorLayer;
 
     const debugLayer = new TileLayer({
       source: new TileDebug(),
@@ -362,13 +396,48 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
       controls: defaultControls({ zoom: false, rotate: false }),
     });
 
+    // Hover effect & coordinate tracking
     map.on('pointermove', (evt) => {
+      if (evt.dragging) return;
+
       if (evt.coordinate) {
         const lonLat = toLonLat(evt.coordinate);
         setCoordinates({
           lon: lonLat[0].toFixed(8),
           lat: lonLat[1].toFixed(8),
         });
+      }
+
+      // Check for hovered feature on vector layer
+      const pixel = map.getEventPixel(evt.originalEvent);
+      const hitFeature = map.forEachFeatureAtPixel(pixel, (feat, layer) => {
+        if (layer === vectorLayerRef.current) {
+          return feat as Feature;
+        }
+        return undefined;
+      });
+
+      const targetElement = mapElement.current;
+
+      if (hitFeature) {
+        if (targetElement) {
+          targetElement.style.cursor = 'context-menu';
+        }
+        if (hoveredFeatureRef.current !== hitFeature) {
+          if (hoveredFeatureRef.current) {
+            hoveredFeatureRef.current.setStyle(undefined);
+          }
+          hitFeature.setStyle(hoverStyle);
+          hoveredFeatureRef.current = hitFeature;
+        }
+      } else {
+        if (targetElement) {
+          targetElement.style.cursor = '';
+        }
+        if (hoveredFeatureRef.current) {
+          hoveredFeatureRef.current.setStyle(undefined);
+          hoveredFeatureRef.current = null;
+        }
       }
     });
 
@@ -379,6 +448,37 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
         setZoomLevel(Math.round(currentZoom));
       }
     });
+
+    // Handle Right-Click (contextmenu) on Map Features
+    const viewport = map.getViewport();
+    const handleContextMenu = (e: MouseEvent) => {
+      const pixel = map.getEventPixel(e);
+      let hitFeature: Feature | null = null;
+
+      map.forEachFeatureAtPixel(pixel, (feat, layer) => {
+        if (layer === vectorLayerRef.current) {
+          hitFeature = feat as Feature;
+          return true; // Stop iteration
+        }
+        return false;
+      });
+
+      if (hitFeature) {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({
+          mouseX: e.clientX,
+          mouseY: e.clientY,
+          feature: hitFeature,
+        });
+      } else {
+        setContextMenu(null);
+      }
+    };
+
+    if (viewport) {
+      viewport.addEventListener('contextmenu', handleContextMenu);
+    }
 
     mapRef.current = map;
     if (onMapReady) {
@@ -391,11 +491,67 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
     resizeObserver.observe(mapElement.current);
 
     return () => {
+      if (viewport) {
+        viewport.removeEventListener('contextmenu', handleContextMenu);
+      }
       resizeObserver.disconnect();
       map.setTarget(undefined);
       mapRef.current = null;
     };
   }, []);
+
+  // Copy formatting handlers
+  const handleCopy = async (format: 'wkt' | 'geojson' | 'kml') => {
+    if (!contextMenu?.feature) {
+      setContextMenu(null);
+      return;
+    }
+
+    const feat = contextMenu.feature;
+    let textToCopy = '';
+
+    try {
+      if (format === 'geojson') {
+        const geojsonFormat = new GeoJSON();
+        const obj = geojsonFormat.writeFeatureObject(feat, {
+          featureProjection: 'EPSG:3857',
+          dataProjection: 'EPSG:4326',
+        });
+        textToCopy = JSON.stringify(obj, null, 2);
+      } else if (format === 'wkt') {
+        const wktFormat = new WKT();
+        textToCopy = wktFormat.writeFeature(feat, {
+          featureProjection: 'EPSG:3857',
+          dataProjection: 'EPSG:4326',
+        });
+      } else if (format === 'kml') {
+        const kmlFormat = new KML({ extractStyles: false });
+        textToCopy = kmlFormat.writeFeatures([feat], {
+          featureProjection: 'EPSG:3857',
+          dataProjection: 'EPSG:4326',
+        });
+      }
+
+      await navigator.clipboard.writeText(textToCopy);
+      setSnackbarMessage(`Copied geometry to clipboard as ${format.toUpperCase()}!`);
+    } catch (err: any) {
+      console.error(`Failed to copy geometry as ${format}:`, err);
+      // Fallback for older browsers
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        setSnackbarMessage(`Copied geometry to clipboard as ${format.toUpperCase()}!`);
+      } catch {
+        setSnackbarMessage(`Failed to copy geometry to clipboard.`);
+      }
+    } finally {
+      setContextMenu(null);
+    }
+  };
 
   // Handler: Add raster layer to map
   const handleAddRasterLayer = async (record: RasterRecord) => {
@@ -405,7 +561,6 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
       throw new Error('Map is not initialized');
     }
 
-    // Check if layer already exists
     if (activeRasterLayers.some((l) => l.id === record.id)) return;
 
     try {
@@ -602,45 +757,38 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
           </ToggleButton>
         </ToggleButtonGroup>
 
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.8 }} />
-
-        <Tooltip title="Clear Drawn Area">
-          <span>
-            <IconButton
-              size="small"
-              color="error"
-              onClick={handleClearArea}
-              disabled={!hasDrawnGeometry}
-              sx={{ p: 0.8 }}
-            >
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
+        {hasDrawnGeometry && (
+          <>
+            <Box sx={{ mx: 0.5, height: 20, width: 1, bgcolor: 'divider' }} />
+            <Tooltip title="Clear Boundary">
+              <IconButton size="small" onClick={handleClearArea} color="error">
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
       </Paper>
 
-      {/* Floating Layer Manager (Top Left beside draw toolbar) */}
+      {/* Layer Manager Widget (Top Left, under toolbar) */}
       <LayerManager
         showOsmBase={showOsmBase}
-        onToggleOsmBase={setShowOsmBase}
+        onToggleOsmBase={() => setShowOsmBase((prev) => !prev)}
         activeLayers={activeRasterLayers}
-        onReorderLayers={handleReorderLayers}
-        onUpdateLayerOpacity={handleUpdateLayerOpacity}
         onToggleLayerVisibility={handleToggleLayerVisibility}
+        onUpdateLayerOpacity={handleUpdateLayerOpacity}
         onRemoveLayer={handleRemoveRasterLayer}
+        onReorderLayers={handleReorderLayers}
         onZoomToLayer={handleZoomToLayer}
         onOpenCatalog={() => setCatalogDrawerOpen(true)}
       />
 
-      {/* Navigation Toolbar (Top Right) */}
+      {/* Map Control Tools (Top Right) */}
       <Paper
         elevation={3}
         sx={{
           position: 'absolute',
           top: 16,
           right: 16,
-          display: 'flex',
-          flexDirection: 'column',
           bgcolor: 'rgba(26, 34, 40, 0.9)',
           backdropFilter: 'blur(4px)',
           border: '1px solid',
@@ -653,16 +801,16 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
             <IconButton
               onClick={() => setCatalogDrawerOpen(true)}
               size="small"
-              color={activeRasterLayers.length > 0 ? "secondary" : "primary"}
+              color={activeRasterLayers.length > 0 ? 'secondary' : 'primary'}
             >
               <CollectionsBookmarkIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title={showDebugLayer ? "Hide Tile Scheme (Debug Grid)" : "Show Tile Scheme (Debug Grid)"} placement="left">
+          <Tooltip title={showDebugLayer ? 'Hide Tile Scheme (Debug Grid)' : 'Show Tile Scheme (Debug Grid)'} placement="left">
             <IconButton
               onClick={() => setShowDebugLayer((prev) => !prev)}
               size="small"
-              color={showDebugLayer ? "warning" : "primary"}
+              color={showDebugLayer ? 'warning' : 'primary'}
             >
               {showDebugLayer ? <GridOnIcon fontSize="small" /> : <GridOffIcon fontSize="small" />}
             </IconButton>
@@ -741,6 +889,67 @@ export const MapComponent: React.FC<MapComponentProps> = ({ externalArea, onArea
           />
         )}
       </Paper>
+
+      {/* Right-Click Feature Context Menu */}
+      <Menu
+        open={contextMenu !== null}
+        onClose={() => setContextMenu(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu !== null
+            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+            : undefined
+        }
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 200,
+              bgcolor: 'background.paper',
+              backgroundImage: 'none',
+              border: '1px solid',
+              borderColor: 'divider',
+              boxShadow: 6,
+            },
+          },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <ContentCopyIcon fontSize="small" color="primary" />
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+            Copy Geometry
+          </Typography>
+        </Box>
+        <MenuItem onClick={() => handleCopy('wkt')}>
+          <ListItemIcon>
+            <DescriptionIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Copy as WKT" secondary="Well-Known Text format" />
+        </MenuItem>
+        <MenuItem onClick={() => handleCopy('geojson')}>
+          <ListItemIcon>
+            <CodeIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Copy as GeoJSON" secondary="RFC 7946 Standard JSON" />
+        </MenuItem>
+        <MenuItem onClick={() => handleCopy('kml')}>
+          <ListItemIcon>
+            <MapIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Copy as KML" secondary="Keyhole Markup Language" />
+        </MenuItem>
+      </Menu>
+
+      {/* Copy notification feedback */}
+      <Snackbar
+        open={Boolean(snackbarMessage)}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarMessage(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setSnackbarMessage(null)} sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
