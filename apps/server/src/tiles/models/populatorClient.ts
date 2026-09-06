@@ -42,7 +42,7 @@ export class PopulatorClient {
       });
 
       if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ message: response.statusText })) as { message?: string };
+        const errorBody = (await response.json().catch(() => ({ message: response.statusText }))) as { message?: string };
         this.logger.error({ msg: 'Populator responded with error on /tiles/area', status: response.status, errorBody });
         throw new HttpError(errorBody.message ?? 'Error from upstream populator', response.status);
       }
@@ -76,7 +76,7 @@ export class PopulatorClient {
       });
 
       if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({ message: response.statusText })) as { message?: string };
+        const errorBody = (await response.json().catch(() => ({ message: response.statusText }))) as { message?: string };
         this.logger.error({ msg: 'Populator responded with error on /tiles/list', status: response.status, errorBody });
         throw new HttpError(errorBody.message ?? 'Error from upstream populator', response.status);
       }

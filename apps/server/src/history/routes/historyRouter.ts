@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { FactoryFunction } from 'tsyringe';
+import type { FactoryFunction } from 'tsyringe';
 import { HistoryController } from '../controllers/historyController';
 
 export const HISTORY_ROUTER_SYMBOL = Symbol('historyRouterFactory');

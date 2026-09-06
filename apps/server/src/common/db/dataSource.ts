@@ -1,4 +1,5 @@
-import { DataSource, DataSourceOptions } from 'typeorm';
+import type { DataSourceOptions } from 'typeorm';
+import { DataSource } from 'typeorm';
 import type { ConfigType } from '../config';
 import type { Logger } from '@map-colonies/js-logger';
 import { PresetEntity } from '../../presets/models/presetEntity';
@@ -13,7 +14,7 @@ export const DATA_SOURCE_SYMBOL = Symbol('DATA_SOURCE');
 
 export const createDataSource = async (config: ConfigType, logger: Logger): Promise<DataSourceWrapper> => {
   const dbConfig = (config.get as any)('appDb');
-  if (!dbConfig || !dbConfig.host) {
+  if (!dbConfig?.host) {
     logger.warn({ msg: 'No appDb configuration found, running without TypeORM database persistence' });
     return { instance: null };
   }

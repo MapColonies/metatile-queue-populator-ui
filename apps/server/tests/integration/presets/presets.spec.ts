@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import supertest from 'supertest';
-import { Application } from 'express';
+import type { Application } from 'express';
 import { getApp } from '../../../src/app';
 import { initConfig } from '../../../src/common/config';
 
@@ -32,10 +32,7 @@ describe('Presets Routes Integration', () => {
         area: [34.95, 32.78, 35.05, 32.84],
       };
 
-      const postRes = await supertest(app)
-        .post('/presets')
-        .send(payload)
-        .set('Content-Type', 'application/json');
+      const postRes = await supertest(app).post('/presets').send(payload).set('Content-Type', 'application/json');
 
       expect(postRes.status).toBe(201);
       expect(postRes.body).toHaveProperty('id');

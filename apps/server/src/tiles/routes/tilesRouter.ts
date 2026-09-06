@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { FactoryFunction } from 'tsyringe';
+import type { FactoryFunction } from 'tsyringe';
 import { TilesController } from '../controllers/tilesController';
 
 export const TILES_ROUTER_SYMBOL = Symbol('tilesRouterFactory');

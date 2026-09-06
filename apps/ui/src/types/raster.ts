@@ -11,7 +11,7 @@ export interface RasterConfig {
 }
 
 export interface RasterLink {
-  scheme: 'WMTS' | 'WMTS_KVP' | 'WMTS_BASE' | string;
+  scheme: "WMTS" | "WMTS_KVP" | "WMTS_BASE" | string;
   name: string;
   url: string;
   description?: string;

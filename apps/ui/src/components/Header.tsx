@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { AppBar, Toolbar, Typography, Box, Chip } from '@mui/material';
-import LayersIcon from '@mui/icons-material/Layers';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import { AppBar, Toolbar, Typography, Box, Chip } from "@mui/material";
+import LayersIcon from "@mui/icons-material/Layers";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import axios from "axios";
 
 export const Header: React.FC = () => {
   const [bffConnected, setBffConnected] = useState<boolean | null>(null);
@@ -11,7 +11,7 @@ export const Header: React.FC = () => {
   const checkBffHealth = async () => {
     try {
       // Check BFF availability with short timeout
-      await axios.get('/api/config/raster', { timeout: 3000 });
+      await axios.get("/api/config/raster", { timeout: 3000 });
       setBffConnected(true);
     } catch {
       setBffConnected(false);
@@ -25,13 +25,25 @@ export const Header: React.FC = () => {
   }, []);
 
   return (
-    <AppBar position="static" elevation={2} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+    <AppBar
+      position="static"
+      elevation={2}
+      sx={{
+        bgcolor: "background.paper",
+        borderBottom: 1,
+        borderColor: "divider",
+      }}
+    >
       <Toolbar variant="dense">
-        <LayersIcon sx={{ mr: 1.5, color: 'primary.main' }} />
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 700, color: 'text.primary' }}>
+        <LayersIcon sx={{ mr: 1.5, color: "primary.main" }} />
+        <Typography
+          variant="h6"
+          component="div"
+          sx={{ flexGrow: 1, fontWeight: 700, color: "text.primary" }}
+        >
           Metatile Queue Populator
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {bffConnected === null ? (
             <Chip label="Checking BFF..." size="small" variant="outlined" />
           ) : bffConnected ? (

@@ -1,12 +1,12 @@
-export type DrawMode = 'none' | 'bbox' | 'polygon';
+export type DrawMode = "none" | "bbox" | "polygon";
 
 export interface BboxArea {
-  type: 'bbox';
+  type: "bbox";
   bbox: [number, number, number, number]; // [minX, minY, maxX, maxY]
 }
 
 export interface GeoJsonArea {
-  type: 'geojson';
+  type: "geojson";
   geojson: Record<string, any>;
 }
 

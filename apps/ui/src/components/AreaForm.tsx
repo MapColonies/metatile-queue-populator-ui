@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -19,19 +19,19 @@ import {
   Autocomplete,
   Stack,
   Chip,
-} from '@mui/material';
-import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
-import SendIcon from '@mui/icons-material/Send';
-import LayersIcon from '@mui/icons-material/Layers';
-import { SelectedArea } from '../types/geometry.ts';
-import { TileEstimationWidget } from './TileEstimationWidget.tsx';
-import { SpatialDropzone } from './SpatialDropzone.tsx';
-import axios from 'axios';
+} from "@mui/material";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import SendIcon from "@mui/icons-material/Send";
+import LayersIcon from "@mui/icons-material/Layers";
+import { SelectedArea } from "../types/geometry.ts";
+import { TileEstimationWidget } from "./TileEstimationWidget.tsx";
+import { SpatialDropzone } from "./SpatialDropzone.tsx";
+import axios from "axios";
 
 interface Preset {
   id: string;
   name: string;
-  category?: 'Continent' | 'Subregion' | 'Country' | 'Custom';
+  category?: "Continent" | "Subregion" | "Country" | "Custom";
   continent?: string;
   subregion?: string;
   description?: string;
@@ -61,19 +61,23 @@ export const AreaForm: React.FC<AreaFormProps> = ({
   const [force, setForce] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [presets, setPresets] = useState<Preset[]>([]);
-  const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [saveDialogOpen, setSaveDialogOpen] = useState<boolean>(false);
-  const [newPresetName, setNewPresetName] = useState<string>('');
-  const [newPresetDesc, setNewPresetDesc] = useState<string>('');
-  const [toast, setToast] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
+  const [newPresetName, setNewPresetName] = useState<string>("");
+  const [newPresetDesc, setNewPresetDesc] = useState<string>("");
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "info";
+  }>({
     open: false,
-    message: '',
-    severity: 'info',
+    message: "",
+    severity: "info",
   });
 
   const fetchPresets = async () => {
     try {
-      const response = await axios.get<Preset[]>('/api/presets');
+      const response = await axios.get<Preset[]>("/api/presets");
       setPresets(response.data);
     } catch {
       // Ignore background preset fetch errors
@@ -93,9 +97,12 @@ export const AreaForm: React.FC<AreaFormProps> = ({
     if (preset.priority !== undefined) setPriority(preset.priority);
 
     if (Array.isArray(preset.area)) {
-      onAreaChange({ type: 'bbox', bbox: preset.area as [number, number, number, number] });
+      onAreaChange({
+        type: "bbox",
+        bbox: preset.area as [number, number, number, number],
+      });
     } else {
-      onAreaChange({ type: 'geojson', geojson: preset.area });
+      onAreaChange({ type: "geojson", geojson: preset.area });
     }
   };
 
@@ -108,18 +115,21 @@ export const AreaForm: React.FC<AreaFormProps> = ({
         minZoom: zoomRange[0],
         maxZoom: zoomRange[1],
         priority,
-        area: selectedArea.type === 'bbox' ? selectedArea.bbox : selectedArea.geojson,
+        area:
+          selectedArea.type === "bbox"
+            ? selectedArea.bbox
+            : selectedArea.geojson,
       };
 
-      const response = await axios.post('/api/presets', payload);
+      const response = await axios.post("/api/presets", payload);
       setPresets((prev) => [response.data, ...prev]);
       setSaveDialogOpen(false);
-      setNewPresetName('');
-      setNewPresetDesc('');
+      setNewPresetName("");
+      setNewPresetDesc("");
       setToast({
         open: true,
         message: `Preset "${payload.name}" saved!`,
-        severity: 'success',
+        severity: "success",
       });
       if (onPresetSaved) {
         onPresetSaved();
@@ -127,8 +137,8 @@ export const AreaForm: React.FC<AreaFormProps> = ({
     } catch (err: any) {
       setToast({
         open: true,
-        message: err.response?.data?.message || 'Failed to save preset',
-        severity: 'error',
+        message: err.response?.data?.message || "Failed to save preset",
+        severity: "error",
       });
     }
   };
@@ -142,8 +152,9 @@ export const AreaForm: React.FC<AreaFormProps> = ({
     if (!selectedArea) {
       setToast({
         open: true,
-        message: 'Please draw an area or bounding box on the map before submitting.',
-        severity: 'error',
+        message:
+          "Please draw an area or bounding box on the map before submitting.",
+        severity: "error",
       });
       return;
     }
@@ -156,44 +167,59 @@ export const AreaForm: React.FC<AreaFormProps> = ({
         priority: Number(priority),
       };
 
-      if (selectedArea.type === 'bbox') {
+      if (selectedArea.type === "bbox") {
         payload.area = selectedArea.bbox;
       } else {
         payload.area = selectedArea.geojson;
       }
 
-      const response = await axios.post('/api/tiles/area', payload, {
+      const response = await axios.post("/api/tiles/area", payload, {
         params: { force },
       });
 
       // Record in Submission History
-      await axios.post('/api/history', {
-        type: 'area',
-        parameters: payload,
-        status: 'SUCCESS',
-        responseMessage: response.data.message || 'Queued successfully',
-      }).catch(() => null);
+      await axios
+        .post("/api/history", {
+          type: "area",
+          parameters: payload,
+          status: "SUCCESS",
+          responseMessage: response.data.message || "Queued successfully",
+        })
+        .catch(() => null);
 
       setToast({
         open: true,
-        message: response.data.message || 'Area tiles successfully added to queue!',
-        severity: 'success',
+        message:
+          response.data.message || "Area tiles successfully added to queue!",
+        severity: "success",
       });
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to submit area job';
-      
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to submit area job";
+
       // Record failure in history
-      await axios.post('/api/history', {
-        type: 'area',
-        parameters: { minZoom: zoomRange[0], maxZoom: zoomRange[1], area: selectedArea.type === 'bbox' ? selectedArea.bbox : selectedArea.geojson },
-        status: 'FAILED',
-        responseMessage: errorMsg,
-      }).catch(() => null);
+      await axios
+        .post("/api/history", {
+          type: "area",
+          parameters: {
+            minZoom: zoomRange[0],
+            maxZoom: zoomRange[1],
+            area:
+              selectedArea.type === "bbox"
+                ? selectedArea.bbox
+                : selectedArea.geojson,
+          },
+          status: "FAILED",
+          responseMessage: errorMsg,
+        })
+        .catch(() => null);
 
       setToast({
         open: true,
         message: errorMsg,
-        severity: 'error',
+        severity: "error",
       });
     } finally {
       setLoading(false);
@@ -205,24 +231,40 @@ export const AreaForm: React.FC<AreaFormProps> = ({
       elevation={3}
       sx={{
         width: 380,
-        maxHeight: 'calc(100vh - 120px)',
-        overflowY: 'auto',
+        maxHeight: "calc(100vh - 120px)",
+        overflowY: "auto",
         p: 2.5,
-        bgcolor: 'background.paper',
-        border: '1px solid',
-        borderColor: isPresetMode ? 'secondary.main' : 'divider',
+        bgcolor: "background.paper",
+        border: "1px solid",
+        borderColor: isPresetMode ? "secondary.main" : "divider",
         borderRadius: 2,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {isPresetMode ? <BookmarkBorderIcon color="secondary" /> : <LayersIcon color="primary" />}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1.5,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {isPresetMode ? (
+            <BookmarkBorderIcon color="secondary" />
+          ) : (
+            <LayersIcon color="primary" />
+          )}
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {isPresetMode ? 'Create New Preset' : 'Queue Area Job'}
+            {isPresetMode ? "Create New Preset" : "Queue Area Job"}
           </Typography>
         </Box>
         {isPresetMode && onCancelPresetMode && (
-          <Button size="small" variant="text" color="inherit" onClick={onCancelPresetMode}>
+          <Button
+            size="small"
+            variant="text"
+            color="inherit"
+            onClick={onCancelPresetMode}
+          >
             Cancel
           </Button>
         )}
@@ -230,8 +272,8 @@ export const AreaForm: React.FC<AreaFormProps> = ({
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         {isPresetMode
-          ? 'Draw a BBOX/Polygon on the map or drop a file to define and save a reusable preset.'
-          : 'Calculate and queue metatiles within the selected geographical boundary.'}
+          ? "Draw a BBOX/Polygon on the map or drop a file to define and save a reusable preset."
+          : "Calculate and queue metatiles within the selected geographical boundary."}
       </Typography>
 
       {/* Preset Selector Autocomplete */}
@@ -241,19 +283,32 @@ export const AreaForm: React.FC<AreaFormProps> = ({
           size="small"
           options={presets}
           groupBy={(option) => {
-            if (option.category === 'Continent' || option.id.startsWith('continent-')) return 'Continents 🌍';
-            if (option.category === 'Subregion' || option.id.startsWith('subregion-')) return 'Sub-regions 🗺️';
-            if (option.category === 'Country' || option.id.startsWith('country-') || option.id.startsWith('default-')) return 'Countries 🚩';
-            return 'Custom Bookmarks ⭐';
+            if (
+              option.category === "Continent" ||
+              option.id.startsWith("continent-")
+            )
+              return "Continents 🌍";
+            if (
+              option.category === "Subregion" ||
+              option.id.startsWith("subregion-")
+            )
+              return "Sub-regions 🗺️";
+            if (
+              option.category === "Country" ||
+              option.id.startsWith("country-") ||
+              option.id.startsWith("default-")
+            )
+              return "Countries 🚩";
+            return "Custom Bookmarks ⭐";
           }}
           getOptionLabel={(option) => option.name}
           value={presets.find((p) => p.id === selectedPresetId) || null}
-          onChange={(_e, val) => handlePresetSelect(val ? val.id : '')}
+          onChange={(_e, val) => handlePresetSelect(val ? val.id : "")}
           isOptionEqualToValue={(option, val) => option.id === val.id}
           ListboxProps={{
             style: {
               maxHeight: 350,
-              overflowY: 'auto',
+              overflowY: "auto",
             },
           }}
           renderInput={(params) => (
@@ -266,12 +321,27 @@ export const AreaForm: React.FC<AreaFormProps> = ({
           renderOption={(props, option) => {
             const { key, ...otherProps } = props;
             return (
-              <Box key={key} component="li" {...otherProps} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', py: 0.75, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <Box
+                key={key}
+                component="li"
+                {...otherProps}
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  py: 0.75,
+                  borderBottom: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>
                   {option.name}
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  Z{option.minZoom}-Z{option.maxZoom} • {option.subregion || option.continent || option.description || 'Preset Area'}
+                  Z{option.minZoom}-Z{option.maxZoom} •{" "}
+                  {option.subregion ||
+                    option.continent ||
+                    option.description ||
+                    "Preset Area"}
                 </Typography>
               </Box>
             );
@@ -286,11 +356,29 @@ export const AreaForm: React.FC<AreaFormProps> = ({
       <Divider sx={{ mb: 2 }} />
 
       <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
           {/* Target Area Readout */}
-          <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+          <Box
+            sx={{
+              p: 1.5,
+              bgcolor: "background.default",
+              borderRadius: 1.5,
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ fontWeight: 600 }}
+              >
                 TARGET GEOMETRY
               </Typography>
               {selectedArea && !isPresetMode && (
@@ -299,7 +387,7 @@ export const AreaForm: React.FC<AreaFormProps> = ({
                   variant="text"
                   startIcon={<BookmarkBorderIcon fontSize="inherit" />}
                   onClick={() => setSaveDialogOpen(true)}
-                  sx={{ fontSize: '0.7rem', py: 0.1, minWidth: 0 }}
+                  sx={{ fontSize: "0.7rem", py: 0.1, minWidth: 0 }}
                 >
                   Save Preset
                 </Button>
@@ -309,20 +397,33 @@ export const AreaForm: React.FC<AreaFormProps> = ({
             {selectedArea ? (
               <Box sx={{ mt: 1 }}>
                 <Chip
-                  label={selectedArea.type === 'bbox' ? 'Bounding Box (BBOX)' : 'Polygon Geometry (GeoJSON)'}
+                  label={
+                    selectedArea.type === "bbox"
+                      ? "Bounding Box (BBOX)"
+                      : "Polygon Geometry (GeoJSON)"
+                  }
                   size="small"
-                  color={isPresetMode ? 'secondary' : 'primary'}
+                  color={isPresetMode ? "secondary" : "primary"}
                   variant="outlined"
                   sx={{ fontWeight: 600, mb: 0.5 }}
                 />
-                <Typography variant="caption" sx={{ display: 'block', wordBreak: 'break-all', fontFamily: 'monospace', color: 'text.secondary', fontSize: '0.7rem' }}>
-                  {selectedArea.type === 'bbox'
-                    ? `[${selectedArea.bbox.map((v) => v.toFixed(4)).join(', ')}]`
-                    : 'Active GeoJSON Feature/Collection loaded'}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: "block",
+                    wordBreak: "break-all",
+                    fontFamily: "monospace",
+                    color: "text.secondary",
+                    fontSize: "0.7rem",
+                  }}
+                >
+                  {selectedArea.type === "bbox"
+                    ? `[${selectedArea.bbox.map((v) => v.toFixed(4)).join(", ")}]`
+                    : "Active GeoJSON Feature/Collection loaded"}
                 </Typography>
               </Box>
             ) : (
-              <Alert severity="info" sx={{ mt: 1, py: 0, fontSize: '0.75rem' }}>
+              <Alert severity="info" sx={{ mt: 1, py: 0, fontSize: "0.75rem" }}>
                 Draw on the map or drop a spatial file above.
               </Alert>
             )}
@@ -332,11 +433,17 @@ export const AreaForm: React.FC<AreaFormProps> = ({
         <Stack spacing={2.5} sx={{ mt: 2.5 }}>
           {/* Zoom Level Slider */}
           <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+            <Box
+              sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}
+            >
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 Zoom Range
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontFamily: "monospace" }}
+              >
                 {zoomRange[0]} — {zoomRange[1]}
               </Typography>
             </Box>
@@ -347,17 +454,20 @@ export const AreaForm: React.FC<AreaFormProps> = ({
               min={0}
               max={18}
               marks={[
-                { value: 0, label: '0' },
-                { value: 6, label: '6' },
-                { value: 12, label: '12' },
-                { value: 18, label: '18' },
+                { value: 0, label: "0" },
+                { value: 6, label: "6" },
+                { value: 12, label: "12" },
+                { value: 18, label: "18" },
               ]}
               disableSwap
             />
           </Box>
 
           {/* Real-time Tile Estimation Preview */}
-          <TileEstimationWidget selectedArea={selectedArea} zoomRange={zoomRange} />
+          <TileEstimationWidget
+            selectedArea={selectedArea}
+            zoomRange={zoomRange}
+          />
 
           {/* Priority */}
           <TextField
@@ -365,7 +475,9 @@ export const AreaForm: React.FC<AreaFormProps> = ({
             type="number"
             size="small"
             value={priority}
-            onChange={(e) => setPriority(Math.max(0, parseInt(e.target.value) || 0))}
+            onChange={(e) =>
+              setPriority(Math.max(0, parseInt(e.target.value) || 0))
+            }
             helperText="Higher values are prioritized first by the retiler"
             fullWidth
             inputProps={{ min: 0 }}
@@ -374,8 +486,18 @@ export const AreaForm: React.FC<AreaFormProps> = ({
           {/* Force Toggle (Only in queue populate mode) */}
           {!isPresetMode && (
             <FormControlLabel
-              control={<Switch checked={force} onChange={(e) => setForce(e.target.checked)} color="warning" />}
-              label={<Typography variant="body2">Force queueing (overwrite duplicates)</Typography>}
+              control={
+                <Switch
+                  checked={force}
+                  onChange={(e) => setForce(e.target.checked)}
+                  color="warning"
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  Force queueing (overwrite duplicates)
+                </Typography>
+              }
             />
           )}
 
@@ -400,11 +522,17 @@ export const AreaForm: React.FC<AreaFormProps> = ({
               color="primary"
               size="large"
               disabled={!selectedArea || loading}
-              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
+              startIcon={
+                loading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : (
+                  <SendIcon />
+                )
+              }
               fullWidth
               sx={{ mt: 1 }}
             >
-              {loading ? 'Submitting to Queue...' : 'Populate Queue'}
+              {loading ? "Submitting to Queue..." : "Populate Queue"}
             </Button>
           )}
         </Stack>
@@ -412,11 +540,17 @@ export const AreaForm: React.FC<AreaFormProps> = ({
 
       {/* Notification Toast */}
       {/* Save Preset Dialog */}
-      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={saveDialogOpen}
+        onClose={() => setSaveDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>Save as Area Preset</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Save the current map geometry and zoom configuration (Z{zoomRange[0]}-Z{zoomRange[1]}) as a reusable preset.
+            Save the current map geometry and zoom configuration (Z
+            {zoomRange[0]}-Z{zoomRange[1]}) as a reusable preset.
           </Typography>
           <Stack spacing={2}>
             <TextField
@@ -440,7 +574,11 @@ export const AreaForm: React.FC<AreaFormProps> = ({
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSavePreset} disabled={!newPresetName.trim()}>
+          <Button
+            variant="contained"
+            onClick={handleSavePreset}
+            disabled={!newPresetName.trim()}
+          >
             Save Preset
           </Button>
         </DialogActions>
@@ -450,9 +588,9 @@ export const AreaForm: React.FC<AreaFormProps> = ({
         open={toast.open}
         autoHideDuration={5000}
         onClose={() => setToast({ ...toast, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <Alert severity={toast.severity} sx={{ width: '100%' }}>
+        <Alert severity={toast.severity} sx={{ width: "100%" }}>
           {toast.message}
         </Alert>
       </Snackbar>

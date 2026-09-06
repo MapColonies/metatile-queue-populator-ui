@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import supertest from 'supertest';
-import { Application } from 'express';
+import type { Application } from 'express';
 import { getApp } from '../../../src/app';
 import { initConfig } from '../../../src/common/config';
 import { PopulatorClient } from '../../../src/tiles/models/populatorClient';
@@ -44,10 +44,7 @@ describe('Tiles Routes Integration', () => {
         area: [34.0, 31.0, 35.0, 32.0],
       };
 
-      const response = await supertest(app)
-        .post('/tiles/area?force=true')
-        .send(body)
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/tiles/area?force=true').send(body).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ message: 'Area request processed' });
@@ -61,10 +58,7 @@ describe('Tiles Routes Integration', () => {
         area: [34.0, 31.0, 35.0, 32.0],
       };
 
-      const response = await supertest(app)
-        .post('/tiles/area')
-        .send(invalidBody)
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/tiles/area').send(invalidBody).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(400);
     });
@@ -74,10 +68,7 @@ describe('Tiles Routes Integration', () => {
     it('should return 200 OK for valid tile list', async () => {
       const body = [{ z: 5, x: 10, y: 12, metatile: 1 }];
 
-      const response = await supertest(app)
-        .post('/tiles/list')
-        .send(body)
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/tiles/list').send(body).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ message: 'Tile list processed' });
@@ -85,10 +76,7 @@ describe('Tiles Routes Integration', () => {
     });
 
     it('should return 400 Bad Request for empty tile list', async () => {
-      const response = await supertest(app)
-        .post('/tiles/list')
-        .send([])
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/tiles/list').send([]).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(400);
     });
@@ -103,10 +91,7 @@ describe('Tiles Routes Integration', () => {
         metatile: 8,
       };
 
-      const response = await supertest(app)
-        .post('/tiles/estimate')
-        .send(body)
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/tiles/estimate').send(body).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('totalMetatiles');

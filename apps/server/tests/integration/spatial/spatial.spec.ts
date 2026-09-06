@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import supertest from 'supertest';
-import { Application } from 'express';
+import type { Application } from 'express';
 import { getApp } from '../../../src/app';
 import { initConfig } from '../../../src/common/config';
 
@@ -23,10 +23,7 @@ describe('Spatial Routes Integration', () => {
         format: 'wkt',
       };
 
-      const response = await supertest(app)
-        .post('/spatial/convert')
-        .send(body)
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/spatial/convert').send(body).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(200);
       expect(response.body.type).toBe('FeatureCollection');
@@ -49,9 +46,7 @@ describe('Spatial Routes Integration', () => {
         ],
       });
 
-      const response = await supertest(app)
-        .post('/spatial/convert')
-        .attach('file', Buffer.from(geojsonContent), 'aoi.geojson');
+      const response = await supertest(app).post('/spatial/convert').attach('file', Buffer.from(geojsonContent), 'aoi.geojson');
 
       expect(response.status).toBe(200);
       expect(response.body.type).toBe('FeatureCollection');
@@ -59,10 +54,7 @@ describe('Spatial Routes Integration', () => {
     });
 
     it('should return 400 Bad Request when no payload or file is attached', async () => {
-      const response = await supertest(app)
-        .post('/spatial/convert')
-        .send({})
-        .set('Content-Type', 'application/json');
+      const response = await supertest(app).post('/spatial/convert').send({}).set('Content-Type', 'application/json');
 
       expect(response.status).toBe(400);
     });

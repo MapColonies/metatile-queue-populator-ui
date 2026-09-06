@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { RasterConfigController } from '../../../src/raster/controllers/rasterConfigController';
 
 describe('RasterConfigController', () => {

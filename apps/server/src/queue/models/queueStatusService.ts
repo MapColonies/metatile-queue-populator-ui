@@ -49,7 +49,7 @@ export class QueueStatusService {
 
     try {
       const dbConfig = (this.config.get as any)('db');
-      if (dbConfig && dbConfig.host) {
+      if (dbConfig?.host) {
         const instance = new PgBoss({
           host: dbConfig.host,
           port: dbConfig.port,
@@ -100,20 +100,16 @@ export class QueueStatusService {
         dbConnected = true;
 
         const allQueues = await pgboss.getQueues();
-        
+
         // Find matching or related queues in pg-boss
         const relevantQueues = allQueues.filter(
-          (q) =>
-            q.name === targetRequestQueue ||
-            q.name === targetTilesQueue ||
-            q.name.startsWith(requestPrefix) ||
-            q.name.startsWith(tilesPrefix)
+          (q) => q.name === targetRequestQueue || q.name === targetTilesQueue || q.name.startsWith(requestPrefix) || q.name.startsWith(tilesPrefix)
         );
 
         if (relevantQueues.length > 0) {
           for (const q of relevantQueues) {
             const rawStats: any = await pgboss.getQueueStats(q.name).catch(() => null);
-            const stats = Array.isArray(rawStats) ? rawStats[0] ?? {} : rawStats ?? {};
+            const stats = Array.isArray(rawStats) ? (rawStats[0] ?? {}) : (rawStats ?? {});
             queues.push({
               queueName: q.name,
               total: q.totalCount ?? stats.totalCount ?? 0,
@@ -126,7 +122,7 @@ export class QueueStatusService {
         } else {
           for (const name of [targetRequestQueue, targetTilesQueue]) {
             const rawStats: any = await pgboss.getQueueStats(name).catch(() => null);
-            const stats = Array.isArray(rawStats) ? rawStats[0] ?? {} : rawStats ?? {};
+            const stats = Array.isArray(rawStats) ? (rawStats[0] ?? {}) : (rawStats ?? {});
             queues.push({
               queueName: name,
               total: stats.totalCount ?? 0,

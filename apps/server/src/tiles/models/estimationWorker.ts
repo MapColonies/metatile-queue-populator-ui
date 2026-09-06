@@ -1,15 +1,23 @@
 import { parentPort, workerData } from 'worker_threads';
-import { BoundingBox, lonLatZoomToTile, tileToBoundingBox, Tile } from '@map-colonies/tile-calc';
+import type { BoundingBox, Tile } from '@map-colonies/tile-calc';
+import { lonLatZoomToTile, tileToBoundingBox } from '@map-colonies/tile-calc';
 import * as turf from '@turf/turf';
 import type { Feature, Polygon, MultiPolygon, FeatureCollection } from 'geojson';
 
-interface ZoomEstimation {
+export interface ZoomEstimation {
   zoom: number;
   metatiles: number;
   tiles: number;
 }
 
-interface EstimateWorkerInput {
+export interface EstimationResult {
+  totalMetatiles: number;
+  totalTiles: number;
+  metatileSize: number;
+  breakdown: ZoomEstimation[];
+}
+
+export interface EstimateWorkerInput {
   area: [number, number, number, number] | Feature | FeatureCollection | Record<string, any>;
   minZoom: number;
   maxZoom: number;
@@ -17,7 +25,7 @@ interface EstimateWorkerInput {
   timeoutMs: number;
 }
 
-function boundingBoxToPolygonFeature(bbox: BoundingBox): Feature<Polygon> {
+export function boundingBoxToPolygonFeature(bbox: BoundingBox): Feature<Polygon> {
   return {
     type: 'Feature',
     properties: {},
@@ -36,7 +44,7 @@ function boundingBoxToPolygonFeature(bbox: BoundingBox): Feature<Polygon> {
   };
 }
 
-function extractBboxAndPolygons(area: EstimateWorkerInput['area']): {
+export function extractBboxAndPolygons(area: EstimateWorkerInput['area']): {
   boundingBox: BoundingBox;
   targetPolygons: Feature<Polygon | MultiPolygon>[];
   isGeojson: boolean;
@@ -88,8 +96,8 @@ function extractBboxAndPolygons(area: EstimateWorkerInput['area']): {
   };
 }
 
-try {
-  const { area, minZoom, maxZoom, metatile, timeoutMs } = workerData as EstimateWorkerInput;
+export function calculateTileEstimation(input: EstimateWorkerInput): EstimationResult {
+  const { area, minZoom, maxZoom, metatile, timeoutMs } = input;
   const startTime = Date.now();
 
   const { boundingBox: geomBbox, targetPolygons, isGeojson } = extractBboxAndPolygons(area);
@@ -129,17 +137,12 @@ try {
 
           let intersects = false;
           for (const { poly, bbox } of polygonWithBboxes) {
-            if (
-              tileBbox.east < bbox[0] ||
-              tileBbox.west > bbox[2] ||
-              tileBbox.north < bbox[1] ||
-              tileBbox.south > bbox[3]
-            ) {
+            if (tileBbox.east < bbox[0] || tileBbox.west > bbox[2] || tileBbox.north < bbox[1] || tileBbox.south > bbox[3]) {
               continue;
             }
 
             const tilePoly = boundingBoxToPolygonFeature(tileBbox);
-            if (turf.booleanIntersects(tilePoly as Feature<Polygon>, poly)) {
+            if (turf.booleanIntersects(tilePoly, poly)) {
               intersects = true;
               break;
             }
@@ -166,19 +169,26 @@ try {
 
   const totalTiles = totalMetatiles * (metatile * metatile);
 
-  parentPort?.postMessage({
-    success: true,
-    result: {
-      totalMetatiles,
-      totalTiles,
-      metatileSize: metatile,
-      breakdown,
-    },
-  });
-} catch (err: any) {
-  parentPort?.postMessage({
-    success: false,
-    error: err.message,
-    isTimeout: String(err.message).startsWith('TIMEOUT:'),
-  });
+  return {
+    totalMetatiles,
+    totalTiles,
+    metatileSize: metatile,
+    breakdown,
+  };
+}
+
+if (parentPort && workerData) {
+  try {
+    const result = calculateTileEstimation(workerData as EstimateWorkerInput);
+    parentPort.postMessage({
+      success: true,
+      result,
+    });
+  } catch (err: any) {
+    parentPort.postMessage({
+      success: false,
+      error: err.message,
+      isTimeout: String(err.message).startsWith('TIMEOUT:'),
+    });
+  }
 }

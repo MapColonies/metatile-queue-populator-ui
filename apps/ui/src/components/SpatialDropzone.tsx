@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -11,25 +11,27 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-} from '@mui/material';
-import UploadFileIcon from '@mui/icons-material/UploadFile';
-import TextSnippetIcon from '@mui/icons-material/TextSnippet';
-import CloseIcon from '@mui/icons-material/Close';
-import axios from 'axios';
-import { SelectedArea } from '../types/geometry.ts';
+} from "@mui/material";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import TextSnippetIcon from "@mui/icons-material/TextSnippet";
+import CloseIcon from "@mui/icons-material/Close";
+import axios from "axios";
+import { SelectedArea } from "../types/geometry.ts";
 
 interface SpatialDropzoneProps {
   onGeometryLoaded: (area: SelectedArea) => void;
 }
 
-export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoaded }) => {
+export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({
+  onGeometryLoaded,
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successFilename, setSuccessFilename] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [textDialogOpen, setTextDialogOpen] = useState<boolean>(false);
-  const [rawSpatialText, setRawSpatialText] = useState<string>('');
+  const [rawSpatialText, setRawSpatialText] = useState<string>("");
 
   const processFile = async (file: File) => {
     setLoading(true);
@@ -37,26 +39,37 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
     setSuccessFilename(null);
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     try {
-      const response = await axios.post('/api/spatial/convert', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await axios.post("/api/spatial/convert", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       const featureCollection = response.data;
-      if (!featureCollection || !featureCollection.features || featureCollection.features.length === 0) {
-        throw new Error('No valid geometry features found in uploaded file.');
+      if (
+        !featureCollection ||
+        !featureCollection.features ||
+        featureCollection.features.length === 0
+      ) {
+        throw new Error("No valid geometry features found in uploaded file.");
       }
 
       onGeometryLoaded({
-        type: 'geojson',
-        geojson: featureCollection.features.length === 1 ? featureCollection.features[0] : featureCollection,
+        type: "geojson",
+        geojson:
+          featureCollection.features.length === 1
+            ? featureCollection.features[0]
+            : featureCollection,
       });
 
-      setSuccessFilename(`${file.name} (${featureCollection.features.length} features)`);
+      setSuccessFilename(
+        `${file.name} (${featureCollection.features.length} features)`,
+      );
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to parse file');
+      setError(
+        err.response?.data?.message || err.message || "Failed to parse file",
+      );
     } finally {
       setLoading(false);
     }
@@ -69,25 +82,38 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
     setError(null);
 
     try {
-      const response = await axios.post('/api/spatial/convert', {
+      const response = await axios.post("/api/spatial/convert", {
         text: rawSpatialText.trim(),
       });
 
       const featureCollection = response.data;
-      if (!featureCollection || !featureCollection.features || featureCollection.features.length === 0) {
-        throw new Error('No valid geometry features found in text.');
+      if (
+        !featureCollection ||
+        !featureCollection.features ||
+        featureCollection.features.length === 0
+      ) {
+        throw new Error("No valid geometry features found in text.");
       }
 
       onGeometryLoaded({
-        type: 'geojson',
-        geojson: featureCollection.features.length === 1 ? featureCollection.features[0] : featureCollection,
+        type: "geojson",
+        geojson:
+          featureCollection.features.length === 1
+            ? featureCollection.features[0]
+            : featureCollection,
       });
 
       setTextDialogOpen(false);
-      setRawSpatialText('');
-      setSuccessFilename(`Pasted Geometry (${featureCollection.features.length} features)`);
+      setRawSpatialText("");
+      setSuccessFilename(
+        `Pasted Geometry (${featureCollection.features.length} features)`,
+      );
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to parse raw text geometry');
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to parse raw text geometry",
+      );
     } finally {
       setLoading(false);
     }
@@ -122,7 +148,7 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         accept=".geojson,.json,.kml,.zip,.wkt,.txt"
       />
 
@@ -133,31 +159,50 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
         onClick={() => fileInputRef.current?.click()}
         sx={{
           p: 1.5,
-          border: '1.5px dashed',
-          borderColor: isDragging ? 'primary.main' : 'divider',
+          border: "1.5px dashed",
+          borderColor: isDragging ? "primary.main" : "divider",
           borderRadius: 1.5,
-          bgcolor: isDragging ? 'rgba(0, 163, 224, 0.08)' : 'rgba(0, 0, 0, 0.15)',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          textAlign: 'center',
-          '&:hover': {
-            borderColor: 'primary.main',
-            bgcolor: 'rgba(0, 163, 224, 0.04)',
+          bgcolor: isDragging
+            ? "rgba(0, 163, 224, 0.08)"
+            : "rgba(0, 0, 0, 0.15)",
+          cursor: "pointer",
+          transition: "all 0.2s ease",
+          textAlign: "center",
+          "&:hover": {
+            borderColor: "primary.main",
+            bgcolor: "rgba(0, 163, 224, 0.04)",
           },
         }}
       >
         {loading ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, py: 0.5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 1,
+              py: 0.5,
+            }}
+          >
             <CircularProgress size={18} color="primary" />
-            <Typography variant="caption">Parsing & Reprojecting to WGS84...</Typography>
+            <Typography variant="caption">
+              Parsing & Reprojecting to WGS84...
+            </Typography>
           </Box>
         ) : (
           <Box>
             <UploadFileIcon color="primary" fontSize="small" />
-            <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.8rem' }}>
+            <Typography
+              variant="body2"
+              sx={{ fontWeight: 500, fontSize: "0.8rem" }}
+            >
               Drop Shapefile (.zip), KML, WKT, or GeoJSON
             </Typography>
-            <Typography variant="caption" color="text.secondary" display="block">
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              display="block"
+            >
               or click to browse from device
             </Typography>
           </Box>
@@ -165,7 +210,7 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
       </Box>
 
       {/* Raw Text WKT / KML button */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 0.5 }}>
         <Button
           size="small"
           variant="text"
@@ -174,7 +219,7 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
             e.stopPropagation();
             setTextDialogOpen(true);
           }}
-          sx={{ fontSize: '0.75rem', py: 0.2 }}
+          sx={{ fontSize: "0.75rem", py: 0.2 }}
         >
           Paste WKT / KML / GeoJSON
         </Button>
@@ -184,9 +229,13 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
       {successFilename && (
         <Alert
           severity="success"
-          sx={{ mt: 1, py: 0.2, fontSize: '0.75rem' }}
+          sx={{ mt: 1, py: 0.2, fontSize: "0.75rem" }}
           action={
-            <IconButton size="small" color="inherit" onClick={() => setSuccessFilename(null)}>
+            <IconButton
+              size="small"
+              color="inherit"
+              onClick={() => setSuccessFilename(null)}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           }
@@ -199,9 +248,13 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
       {error && (
         <Alert
           severity="error"
-          sx={{ mt: 1, py: 0.2, fontSize: '0.75rem' }}
+          sx={{ mt: 1, py: 0.2, fontSize: "0.75rem" }}
           action={
-            <IconButton size="small" color="inherit" onClick={() => setError(null)}>
+            <IconButton
+              size="small"
+              color="inherit"
+              onClick={() => setError(null)}
+            >
               <CloseIcon fontSize="small" />
             </IconButton>
           }
@@ -211,11 +264,17 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
       )}
 
       {/* Paste Dialog */}
-      <Dialog open={textDialogOpen} onClose={() => setTextDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={textDialogOpen}
+        onClose={() => setTextDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Paste Spatial Coordinates or Markup</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Paste raw WKT (e.g. <code>POLYGON((...))</code>), KML markup, or GeoJSON:
+            Paste raw WKT (e.g. <code>POLYGON((...))</code>), KML markup, or
+            GeoJSON:
           </Typography>
           <TextField
             multiline
@@ -224,12 +283,16 @@ export const SpatialDropzone: React.FC<SpatialDropzoneProps> = ({ onGeometryLoad
             placeholder="POLYGON((34.0 31.0, 35.0 31.0, 35.0 32.0, 34.0 32.0, 34.0 31.0))"
             value={rawSpatialText}
             onChange={(e) => setRawSpatialText(e.target.value)}
-            sx={{ fontFamily: 'monospace' }}
+            sx={{ fontFamily: "monospace" }}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setTextDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleTextConvert} disabled={!rawSpatialText.trim() || loading}>
+          <Button
+            variant="contained"
+            onClick={handleTextConvert}
+            disabled={!rawSpatialText.trim() || loading}
+          >
             Convert & Fit Map
           </Button>
         </DialogActions>

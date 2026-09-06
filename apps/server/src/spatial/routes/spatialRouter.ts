@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { FactoryFunction } from 'tsyringe';
+import type { FactoryFunction } from 'tsyringe';
 import { SpatialController } from '../controllers/spatialController';
 
 export const SPATIAL_ROUTER_SYMBOL = Symbol('spatialRouterFactory');

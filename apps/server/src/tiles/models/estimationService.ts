@@ -8,6 +8,7 @@ import { SERVICES } from '../../common/constants';
 import type { ConfigType } from '../../common/config';
 import { HttpError } from '../../common/errors';
 import httpStatus from 'http-status-codes';
+import { calculateTileEstimation, EstimationResult } from './estimationWorker';
 
 export interface ZoomEstimation {
   zoom: number;
@@ -15,12 +16,7 @@ export interface ZoomEstimation {
   tiles: number;
 }
 
-export interface EstimationResult {
-  totalMetatiles: number;
-  totalTiles: number;
-  metatileSize: number;
-  breakdown: ZoomEstimation[];
-}
+export type { EstimationResult };
 
 export interface EstimateRequest {
   area: [number, number, number, number] | Feature | FeatureCollection | Record<string, any>;
@@ -55,6 +51,27 @@ export class TileEstimationService {
     }
 
     const workerPath = this.resolveWorkerPath();
+
+    // In Vitest / in-memory test environments or if compiled worker is unavailable, run inline
+    if (process.env.NODE_ENV === 'test' || !workerPath) {
+      try {
+        return calculateTileEstimation({
+          area,
+          minZoom,
+          maxZoom,
+          metatile,
+          timeoutMs: MAX_CALCULATION_TIME_MS,
+        });
+      } catch (err: any) {
+        if (String(err.message).startsWith('TIMEOUT:')) {
+          throw new HttpError(
+            'Calculation timed out after 30 seconds due to extremely large spatial query area. Please refine zoom range or select a smaller area.',
+            httpStatus.REQUEST_TIMEOUT
+          );
+        }
+        throw new HttpError(err.message || 'Tile estimation failed', httpStatus.INTERNAL_SERVER_ERROR);
+      }
+    }
 
     return new Promise<EstimationResult>((resolvePromise, rejectPromise) => {
       const worker = new Worker(workerPath, {
@@ -109,13 +126,8 @@ export class TileEstimationService {
     });
   }
 
-  private resolveWorkerPath(): string {
-    const candidates = [
-      resolve(__dirname, './estimationWorker.js'),
-      resolve(__dirname, './estimationWorker.ts'),
-      resolve(process.cwd(), 'dist/tiles/models/estimationWorker.js'),
-      resolve(process.cwd(), 'src/tiles/models/estimationWorker.ts'),
-    ];
+  private resolveWorkerPath(): string | null {
+    const candidates = [resolve(__dirname, './estimationWorker.js'), resolve(process.cwd(), 'dist/tiles/models/estimationWorker.js')];
 
     for (const p of candidates) {
       if (existsSync(p)) {
@@ -123,6 +135,6 @@ export class TileEstimationService {
       }
     }
 
-    return resolve(__dirname, './estimationWorker.js');
+    return null;
   }
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import supertest from 'supertest';
-import { Application } from 'express';
+import type { Application } from 'express';
 import { getApp } from '../../../src/app';
 import { initConfig } from '../../../src/common/config';
 import { QueueStatusService } from '../../../src/queue/models/queueStatusService';

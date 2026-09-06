@@ -20,7 +20,15 @@ describe('SpatialConverter', async () => {
             properties: { name: 'Test' },
             geometry: {
               type: 'Polygon',
-              coordinates: [[[34, 31], [35, 31], [35, 32], [34, 32], [34, 31]]],
+              coordinates: [
+                [
+                  [34, 31],
+                  [35, 31],
+                  [35, 32],
+                  [34, 32],
+                  [34, 31],
+                ],
+              ],
             },
           },
         ],

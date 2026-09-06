@@ -1,6 +1,6 @@
 # Map Colonies typescript service template
 
-----------------------------------
+---
 
 This is a basic repo template for building new MapColonies web services in Typescript.
 
@@ -10,8 +10,8 @@ This is a basic repo template for building new MapColonies web services in Types
 > [!WARNING]
 > After creating a new repo based on this template, you should delete the CODEOWNERS file.
 
-
 ## Development
+
 When in development you should use the command `npm run start:dev`. The main benefits are that it enables offline mode for the config package, and source map support for NodeJS errors.
 
 ### Template Features:
@@ -59,6 +59,7 @@ When in development you should use the command `npm run start:dev`. The main ben
 - snyk
 
 ## API
+
 Checkout the OpenAPI spec [here](/openapi3.yaml)
 
 ## Installation
@@ -114,11 +115,13 @@ npm run test
 ```
 
 To only run unit tests:
+
 ```bash
 npm run test:unit
 ```
 
 To only run integration tests:
+
 ```bash
 npm run test:integration
 ```

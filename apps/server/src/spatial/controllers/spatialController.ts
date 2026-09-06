@@ -11,10 +11,7 @@ export class SpatialController {
   public convertFile: RequestHandler = async (req, res, next) => {
     try {
       if (req.file) {
-        const featureCollection = await this.spatialConverter.parseBuffer(
-          req.file.buffer,
-          req.file.originalname
-        );
+        const featureCollection = await this.spatialConverter.parseBuffer(req.file.buffer, req.file.originalname);
         return res.status(httpStatus.OK).json(featureCollection);
       }
 

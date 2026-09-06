@@ -20,7 +20,7 @@ export const registerDependencies = (
     if (inject) {
       const provider = injectionObj.provider;
       if (provider && typeof provider === 'object' && 'useValue' in provider) {
-        container.register(injectionObj.token, { useValue: (provider as ValueProvider<unknown>).useValue ?? null });
+        container.register(injectionObj.token, { useValue: provider.useValue ?? null });
       } else {
         container.register(injectionObj.token, provider as constructor<unknown>);
       }
@@ -29,7 +29,7 @@ export const registerDependencies = (
   override?.forEach((injectionObj) => {
     const provider = injectionObj.provider;
     if (provider && typeof provider === 'object' && 'useValue' in provider) {
-      container.register(injectionObj.token, { useValue: (provider as ValueProvider<unknown>).useValue ?? null });
+      container.register(injectionObj.token, { useValue: provider.useValue ?? null });
     } else {
       container.register(injectionObj.token, provider as constructor<unknown>);
     }

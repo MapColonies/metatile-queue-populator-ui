@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.cache
+*.log
+*.lock
+pnpm-lock.yaml
+apps/server/dist
+apps/ui/dist
+apps/server/helm/templates/**
+apps/server/coverage/**
+apps/server/assets/**
+.scratch
+.agents

@@ -6,7 +6,7 @@ import { TileEstimationService, EstimationResult } from '../models/estimationSer
 
 type PostTilesAreaHandler = RequestHandler<undefined, { message: string }, unknown, { force?: string }>;
 type PostTilesListHandler = RequestHandler<undefined, { message: string }, unknown, { force?: string }>;
-type PostTilesEstimateHandler = RequestHandler<undefined, EstimationResult, any>;
+type PostTilesEstimateHandler = RequestHandler<undefined, EstimationResult>;
 
 @injectable()
 export class TilesController {

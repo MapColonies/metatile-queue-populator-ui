@@ -105,11 +105,11 @@ export class HistoryService {
         if (options.status) where.status = options.status;
 
         if (options.from && options.to) {
-          where.timestamp = Between(options.from, options.to) as any;
+          where.timestamp = Between(options.from, options.to);
         } else if (options.from) {
-          where.timestamp = MoreThanOrEqual(options.from) as any;
+          where.timestamp = MoreThanOrEqual(options.from);
         } else if (options.to) {
-          where.timestamp = LessThanOrEqual(options.to) as any;
+          where.timestamp = LessThanOrEqual(options.to);
         }
 
         const entities = await this.historyRepository.find({

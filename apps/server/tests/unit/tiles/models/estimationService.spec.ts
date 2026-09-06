@@ -15,7 +15,7 @@ describe('TileEstimationService', async () => {
   });
 
   describe('estimateTiles with BBOX', () => {
-    it('should accurately calculate tile and metatile counts for a known bounding box', () => {
+    it('should accurately calculate tile and metatile counts for a known bounding box', async () => {
       const request = {
         minZoom: 0,
         maxZoom: 2,
@@ -23,7 +23,7 @@ describe('TileEstimationService', async () => {
         metatile: 8,
       };
 
-      const result = estimationService.estimateTiles(request);
+      const result = await estimationService.estimateTiles(request);
 
       expect(result.metatileSize).toBe(8);
       expect(result.breakdown).toHaveLength(3);
@@ -34,7 +34,7 @@ describe('TileEstimationService', async () => {
       expect(result.totalTiles).toBe(result.totalMetatiles * 64);
     });
 
-    it('should correctly scale tiles when zoom increases', () => {
+    it('should correctly scale tiles when zoom increases', async () => {
       const request = {
         minZoom: 5,
         maxZoom: 7,
@@ -42,14 +42,14 @@ describe('TileEstimationService', async () => {
         metatile: 8,
       };
 
-      const result = estimationService.estimateTiles(request);
+      const result = await estimationService.estimateTiles(request);
       expect(result.breakdown).toHaveLength(3);
       expect(result.breakdown[2].tiles).toBeGreaterThanOrEqual(result.breakdown[0].tiles);
     });
   });
 
   describe('estimateTiles with GeoJSON Polygon', () => {
-    it('should calculate estimates for a GeoJSON feature', () => {
+    it('should calculate estimates for a GeoJSON feature', async () => {
       const polygonFeature = {
         type: 'Feature' as const,
         properties: {},
@@ -74,7 +74,7 @@ describe('TileEstimationService', async () => {
         metatile: 8,
       };
 
-      const result = estimationService.estimateTiles(request);
+      const result = await estimationService.estimateTiles(request);
       expect(result.totalTiles).toBeGreaterThan(0);
       expect(result.breakdown).toHaveLength(2);
     });
