@@ -8,6 +8,7 @@ pnpm-lock.yaml
 apps/server/dist
 apps/ui/dist
 apps/server/helm/templates/**
+helm/**/templates/**
 apps/server/coverage/**
 apps/server/assets/**
 .scratch
