@@ -19,6 +19,20 @@ cloudProvider:
   flavor: openshift
 
 # -------------------------------------------------------------
+# Chart Managed Secrets (Optional)
+# If enabled: generates a Secret object from these values.
+# If disabled: deployment will use external existing secret names.
+# -------------------------------------------------------------
+secrets:
+  enabled: true
+  name: '' # if empty, defaults to '<release-name>-metatile-queue-populator-ui-secret'
+  rasterToken: ''
+  dbUsername: 'postgres'
+  dbPassword: ''
+  appDbUsername: 'postgres'
+  appDbPassword: ''
+
+# -------------------------------------------------------------
 # Frontend (React UI + Nginx Reverse Proxy)
 # -------------------------------------------------------------
 frontend:
@@ -100,8 +114,8 @@ backend:
     # Raster Configuration
     raster:
       cswUrl: 'https://catalog.mapcolonies.net/api/raster/v1/csw'
-      tokenSecretName: 'metatile-raster-secret'
-      tokenSecretKey: 'token'
+      tokenSecretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
+      tokenSecretKey: ''
       defaultMap:
         useOsm: true
         productId: ''
@@ -113,9 +127,9 @@ backend:
       port: 5432
       database: 'metatile-queue-populator-ui'
       schema: 'public'
-      secretName: 'metatile-db-secret'
-      usernameKey: 'username'
-      passwordKey: 'password'
+      secretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
+      usernameKey: ''
+      passwordKey: ''
       ssl: false
 
     # pg-boss DB (Queue Monitoring)
@@ -124,9 +138,9 @@ backend:
       port: 5432
       database: 'vector-rendering-buildings'
       schema: 'pgboss'
-      secretName: 'metatile-db-secret'
-      usernameKey: 'username'
-      passwordKey: 'password'
+      secretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
+      usernameKey: ''
+      passwordKey: ''
       ssl: false
 
 # -------------------------------------------------------------

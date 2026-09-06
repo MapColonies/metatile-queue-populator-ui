@@ -1,6 +1,7 @@
 {{- if .Values.backend.enabled -}}
 {{- $registryUrl := include "metatile-queue-populator-ui.cloudProviderDockerRegistryUrl" . -}}
 {{- $imagePullSecret := include "metatile-queue-populator-ui.cloudProviderImagePullSecretName" . -}}
+{{- $chartSecretName := .Values.secrets.name | default (printf "%s-secret" (include "metatile-queue-populator-ui.fullname" .)) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,6 +21,9 @@ spec:
         {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 8 }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+        {{- if .Values.secrets.enabled }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
     spec:
       {{- if $imagePullSecret }}
       imagePullSecrets:
@@ -42,36 +46,36 @@ spec:
               value: "production"
             - name: SERVER_PORT
               value: {{ .Values.backend.service.targetPort | default 8080 | quote }}
-            {{- if .Values.backend.env.raster.tokenSecretName }}
+            {{- if or .Values.secrets.enabled .Values.backend.env.raster.tokenSecretName }}
             - name: RASTER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.backend.env.raster.tokenSecretName }}
-                  key: {{ .Values.backend.env.raster.tokenSecretKey | default "token" }}
+                  name: {{ default $chartSecretName .Values.backend.env.raster.tokenSecretName }}
+                  key: {{ default "token" .Values.backend.env.raster.tokenSecretKey }}
             {{- end }}
-            {{- if .Values.backend.env.appDb.secretName }}
+            {{- if or .Values.secrets.enabled .Values.backend.env.appDb.secretName }}
             - name: APP_DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.backend.env.appDb.secretName }}
-                  key: {{ .Values.backend.env.appDb.usernameKey | default "username" }}
+                  name: {{ default $chartSecretName .Values.backend.env.appDb.secretName }}
+                  key: {{ if .Values.secrets.enabled }}{{ default "app-db-username" .Values.backend.env.appDb.usernameKey }}{{ else }}{{ default "username" .Values.backend.env.appDb.usernameKey }}{{ end }}
             - name: APP_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.backend.env.appDb.secretName }}
-                  key: {{ .Values.backend.env.appDb.passwordKey | default "password" }}
+                  name: {{ default $chartSecretName .Values.backend.env.appDb.secretName }}
+                  key: {{ if .Values.secrets.enabled }}{{ default "app-db-password" .Values.backend.env.appDb.passwordKey }}{{ else }}{{ default "password" .Values.backend.env.appDb.passwordKey }}{{ end }}
             {{- end }}
-            {{- if .Values.backend.env.db.secretName }}
+            {{- if or .Values.secrets.enabled .Values.backend.env.db.secretName }}
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.backend.env.db.secretName }}
-                  key: {{ .Values.backend.env.db.usernameKey | default "username" }}
+                  name: {{ default $chartSecretName .Values.backend.env.db.secretName }}
+                  key: {{ if .Values.secrets.enabled }}{{ default "db-username" .Values.backend.env.db.usernameKey }}{{ else }}{{ default "username" .Values.backend.env.db.usernameKey }}{{ end }}
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.backend.env.db.secretName }}
-                  key: {{ .Values.backend.env.db.passwordKey | default "password" }}
+                  name: {{ default $chartSecretName .Values.backend.env.db.secretName }}
+                  key: {{ if .Values.secrets.enabled }}{{ default "db-password" .Values.backend.env.db.passwordKey }}{{ else }}{{ default "password" .Values.backend.env.db.passwordKey }}{{ end }}
             {{- end }}
           volumeMounts:
             - name: config-volume
