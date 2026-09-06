@@ -2,7 +2,7 @@ openapi: 3.0.1
 info:
   title: metatile-queue-populator-ui-bff
   description: BFF Service for Metatile Queue Populator UI
-  version: 1.0.0
+  version: 1.1.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -242,12 +242,16 @@ paths:
               properties:
                 type:
                   type: string
-                  enum: [area, list]
+                  enum:
+                    - area
+                    - list
                 parameters:
                   type: object
                 status:
                   type: string
-                  enum: [SUCCESS, FAILED]
+                  enum:
+                    - SUCCESS
+                    - FAILED
                 responseMessage:
                   type: string
       responses:
@@ -474,11 +478,11 @@ components:
         required:
           - z
           - x
-          - y
+          - 'y'
         properties:
           x:
             type: integer
-          y:
+          'y':
             type: integer
           z:
             type: integer
