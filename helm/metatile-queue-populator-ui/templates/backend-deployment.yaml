@@ -1,0 +1,106 @@
+{{- if .Values.backend.enabled -}}
+{{- $registryUrl := include "metatile-queue-populator-ui.cloudProviderDockerRegistryUrl" . -}}
+{{- $imagePullSecret := include "metatile-queue-populator-ui.cloudProviderImagePullSecretName" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "metatile-queue-populator-ui.backend.fullname" . }}
+  labels:
+    {{- include "metatile-queue-populator-ui.labels" . | nindent 4 }}
+    {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "metatile-queue-populator-ui.labels" . | nindent 8 }}
+        {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/backend-configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if $imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ $imagePullSecret | quote }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+        - name: backend
+          image: {{ $registryUrl }}{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.service.targetPort | default 8080 }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: SERVER_PORT
+              value: {{ .Values.backend.service.targetPort | default 8080 | quote }}
+            {{- if .Values.backend.env.raster.tokenSecretName }}
+            - name: RASTER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.env.raster.tokenSecretName }}
+                  key: {{ .Values.backend.env.raster.tokenSecretKey | default "token" }}
+            {{- end }}
+            {{- if .Values.backend.env.appDb.secretName }}
+            - name: APP_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.env.appDb.secretName }}
+                  key: {{ .Values.backend.env.appDb.usernameKey | default "username" }}
+            - name: APP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.env.appDb.secretName }}
+                  key: {{ .Values.backend.env.appDb.passwordKey | default "password" }}
+            {{- end }}
+            {{- if .Values.backend.env.db.secretName }}
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.env.db.secretName }}
+                  key: {{ .Values.backend.env.db.usernameKey | default "username" }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.backend.env.db.secretName }}
+                  key: {{ .Values.backend.env.db.passwordKey | default "password" }}
+            {{- end }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: /usr/src/app/dist/config/default.json
+              subPath: default.json
+          {{- if .Values.backend.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.backend.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.backend.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.backend.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.backend.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.backend.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.backend.resources.enabled }}
+          resources:
+            {{- toYaml .Values.backend.resources.value | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "metatile-queue-populator-ui.backend.fullname" . }}-config
+{{- end }}

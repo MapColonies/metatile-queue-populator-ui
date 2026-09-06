@@ -1,0 +1,142 @@
+global:
+  cloudProvider:
+    dockerRegistryUrl: 'acrarolibotnonprod.azurecr.io/'
+    imagePullSecretName: ''
+    flavor: openshift
+  tracing: {}
+  metrics: {}
+
+mclabels:
+  component: metatile-queue-populator-ui
+  partOf: raster
+  owner: common
+  prometheus:
+    enabled: true
+
+cloudProvider:
+  dockerRegistryUrl: 'acrarolibotnonprod.azurecr.io/'
+  imagePullSecretName: ''
+  flavor: openshift
+
+# -------------------------------------------------------------
+# Frontend (React UI + Nginx Reverse Proxy)
+# -------------------------------------------------------------
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: metatile-queue-populator-ui-client
+    tag: '1.0.0'
+    pullPolicy: IfNotPresent
+  service:
+    port: 8080
+    targetPort: 8080
+    type: ClusterIP
+  resources:
+    enabled: true
+    value:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    path: /healthz
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    path: /healthz
+
+# -------------------------------------------------------------
+# Backend (Node.js BFF Service)
+# -------------------------------------------------------------
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: metatile-queue-populator-ui-server
+    tag: '1.0.0'
+    pullPolicy: IfNotPresent
+  service:
+    port: 8080
+    targetPort: 8080
+    type: ClusterIP
+  resources:
+    enabled: true
+    value:
+      limits:
+        cpu: 1000m
+        memory: 1024Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    path: /liveness
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    path: /readiness
+
+  env:
+    logLevel: info
+    logPrettyPrintEnabled: false
+    responseCompressionEnabled: true
+    requestPayloadLimit: 20mb
+    populatorUrl: 'https://render-buildings-mqp-route-vector-dev.apps.j1lk3njp.eastus.aroapp.io/'
+    
+    # Raster Configuration
+    raster:
+      cswUrl: 'https://catalog.mapcolonies.net/api/raster/v1/csw'
+      tokenSecretName: 'metatile-raster-secret'
+      tokenSecretKey: 'token'
+      defaultMap:
+        useOsm: true
+        productId: ''
+        productType: ''
+
+    # Application DB (PostgreSQL - Presets, History, Audit)
+    appDb:
+      host: 'postgres-prod.mapcolonies.net'
+      port: 5432
+      database: 'metatile-queue-populator-ui'
+      schema: 'public'
+      secretName: 'metatile-db-secret'
+      usernameKey: 'username'
+      passwordKey: 'password'
+      ssl: false
+
+    # pg-boss DB (Queue Monitoring)
+    db:
+      host: 'postgres-prod.mapcolonies.net'
+      port: 5432
+      database: 'vector-rendering-buildings'
+      schema: 'pgboss'
+      secretName: 'metatile-db-secret'
+      usernameKey: 'username'
+      passwordKey: 'password'
+      ssl: false
+
+# -------------------------------------------------------------
+# OpenShift Route Exposure (Points to Frontend Nginx)
+# -------------------------------------------------------------
+route:
+  enabled: true
+  host: ''
+  path: /
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

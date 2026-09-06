@@ -1,0 +1,18 @@
+{{- if .Values.frontend.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "metatile-queue-populator-ui.frontend.fullname" . }}
+  labels:
+    {{- include "metatile-queue-populator-ui.labels" . | nindent 4 }}
+    {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.frontend.service.port | default 8080 }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 4 }}
+{{- end }}

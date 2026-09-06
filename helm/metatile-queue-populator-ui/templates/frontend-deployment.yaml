@@ -1,0 +1,65 @@
+{{- if .Values.frontend.enabled -}}
+{{- $registryUrl := include "metatile-queue-populator-ui.cloudProviderDockerRegistryUrl" . -}}
+{{- $imagePullSecret := include "metatile-queue-populator-ui.cloudProviderImagePullSecretName" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "metatile-queue-populator-ui.frontend.fullname" . }}
+  labels:
+    {{- include "metatile-queue-populator-ui.labels" . | nindent 4 }}
+    {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "metatile-queue-populator-ui.labels" . | nindent 8 }}
+        {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if $imagePullSecret }}
+      imagePullSecrets:
+        - name: {{ $imagePullSecret | quote }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        fsGroup: 101
+      containers:
+        - name: frontend
+          image: {{ $registryUrl }}{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.service.targetPort | default 8080 }}
+              protocol: TCP
+          env:
+            - name: BACKEND_SERVICE_HOST
+              value: {{ include "metatile-queue-populator-ui.backend.fullname" . | quote }}
+            - name: BACKEND_SERVICE_PORT
+              value: {{ .Values.backend.service.port | default 8080 | quote }}
+          {{- if .Values.frontend.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.frontend.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.frontend.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.frontend.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.frontend.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.frontend.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.frontend.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.frontend.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.frontend.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.frontend.resources.enabled }}
+          resources:
+            {{- toYaml .Values.frontend.resources.value | nindent 12 }}
+          {{- end }}
+{{- end }}

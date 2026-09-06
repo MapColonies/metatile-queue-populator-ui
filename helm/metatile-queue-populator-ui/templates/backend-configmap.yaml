@@ -1,0 +1,62 @@
+{{- if .Values.backend.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "metatile-queue-populator-ui.backend.fullname" . }}-config
+  labels:
+    {{- include "metatile-queue-populator-ui.labels" . | nindent 4 }}
+    {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 4 }}
+data:
+  default.json: |
+    {
+      "openapiConfig": {
+        "filePath": "./openapi3.yaml",
+        "basePath": "/docs",
+        "rawPath": "/api",
+        "uiPath": "/api"
+      },
+      "telemetry": {
+        "metrics": {},
+        "tracing": { "isEnabled": false },
+        "logger": {
+          "level": {{ .Values.backend.env.logLevel | default "info" | quote }},
+          "prettyPrint": {{ .Values.backend.env.logPrettyPrintEnabled | default false }}
+        }
+      },
+      "server": {
+        "port": {{ .Values.backend.service.port | default 8080 }},
+        "request": { "payload": { "limit": {{ .Values.backend.env.requestPayloadLimit | default "20mb" | quote }} } },
+        "response": { "compression": { "enabled": {{ .Values.backend.env.responseCompressionEnabled | default true }} } }
+      },
+      "populator": {
+        "url": {{ .Values.backend.env.populatorUrl | quote }}
+      },
+      "raster": {
+        "cswUrl": {{ .Values.backend.env.raster.cswUrl | quote }},
+        "token": "",
+        "defaultMap": {
+          "useOsm": {{ .Values.backend.env.raster.defaultMap.useOsm | default true }},
+          "productId": {{ .Values.backend.env.raster.defaultMap.productId | default "" | quote }},
+          "productType": {{ .Values.backend.env.raster.defaultMap.productType | default "" | quote }}
+        }
+      },
+      "appDb": {
+        "host": {{ .Values.backend.env.appDb.host | quote }},
+        "port": {{ .Values.backend.env.appDb.port | default 5432 }},
+        "database": {{ .Values.backend.env.appDb.database | quote }},
+        "schema": {{ .Values.backend.env.appDb.schema | default "public" | quote }},
+        "synchronize": false,
+        "logging": false,
+        "ssl": { "enabled": {{ .Values.backend.env.appDb.ssl | default false }} }
+      },
+      "db": {
+        "host": {{ .Values.backend.env.db.host | quote }},
+        "port": {{ .Values.backend.env.db.port | default 5432 }},
+        "database": {{ .Values.backend.env.db.database | quote }},
+        "schema": {{ .Values.backend.env.db.schema | default "pgboss" | quote }},
+        "createSchema": false,
+        "migrate": false,
+        "ssl": { "enabled": {{ .Values.backend.env.db.ssl | default false }} }
+      }
+    }
+{{- end }}

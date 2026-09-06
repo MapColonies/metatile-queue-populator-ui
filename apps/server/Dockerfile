@@ -1,34 +1,36 @@
-FROM node:24 AS build
+FROM node:22-alpine AS builder
 
+WORKDIR /app
 
-WORKDIR /tmp/buildApp
+RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
 
-COPY ./package*.json ./
-COPY .husky/ .husky/
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY apps/server/ ./apps/server/
 
-RUN npm install
-COPY . .
-RUN npm run build
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @metatile-queue-populator-ui/server build
 
-FROM node:24.10.0-alpine3.22 AS production
+FROM node:22-alpine AS runner
 
-RUN apk add dumb-init
+RUN apk add --no-cache dumb-init
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080
 
-
 WORKDIR /usr/src/app
 
-COPY --chown=node:node package*.json ./
-COPY .husky/ .husky/
+COPY apps/server/package.json ./
+COPY --from=builder /app/apps/server/dist ./dist
+COPY --from=builder /app/apps/server/dist/config ./dist/config
+COPY --from=builder /app/apps/server/dist/assets ./dist/assets
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/server/node_modules ./dist/node_modules
 
-RUN npm ci --only=production
+RUN chown -R 1001:0 /usr/src/app && chmod -R g=u /usr/src/app
 
-COPY --chown=node:node --from=build /tmp/buildApp/dist .
-COPY --chown=node:node ./config ./config
-
-
-USER node
+USER 1001
 EXPOSE 8080
+
+WORKDIR /usr/src/app/dist
+
 CMD ["dumb-init", "node", "--import", "./instrumentation.mjs", "./index.js"]
