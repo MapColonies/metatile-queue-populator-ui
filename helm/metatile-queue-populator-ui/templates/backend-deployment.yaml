@@ -11,6 +11,7 @@ metadata:
     {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.backend.replicaCount }}
+  revisionHistoryLimit: {{ .Values.backend.revisionHistoryLimit | default .Values.revisionHistoryLimit | default 2 }}
   selector:
     matchLabels:
       {{- include "metatile-queue-populator-ui.backend.selectorLabels" . | nindent 6 }}

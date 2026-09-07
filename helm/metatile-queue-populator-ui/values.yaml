@@ -18,6 +18,9 @@ cloudProvider:
   imagePullSecretName: ''
   flavor: openshift
 
+# Amount of replica sets / deployment revisions to keep
+revisionHistoryLimit: 2
+
 # -------------------------------------------------------------
 # Chart Managed Secrets (Optional)
 # -------------------------------------------------------------
@@ -36,6 +39,7 @@ secrets:
 frontend:
   enabled: true
   replicaCount: 1
+  revisionHistoryLimit: 2
   image:
     repository: metatile-queue-populator-ui-client
     tag: '1.0.0'
@@ -72,6 +76,7 @@ frontend:
 backend:
   enabled: true
   replicaCount: 1
+  revisionHistoryLimit: 2
   image:
     repository: metatile-queue-populator-ui-server
     tag: '1.0.0'

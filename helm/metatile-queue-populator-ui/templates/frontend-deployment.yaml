@@ -10,6 +10,7 @@ metadata:
     {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.frontend.replicaCount }}
+  revisionHistoryLimit: {{ .Values.frontend.revisionHistoryLimit | default .Values.revisionHistoryLimit | default 2 }}
   selector:
     matchLabels:
       {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 6 }}
@@ -40,7 +41,6 @@ spec:
               value: {{ include "metatile-queue-populator-ui.backend.fullname" . | quote }}
             - name: BACKEND_SERVICE_PORT
               value: {{ .Values.backend.service.port | default 8080 | quote }}
-          {{- if .Values.frontend.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
               path: {{ .Values.frontend.livenessProbe.path }}
@@ -48,8 +48,6 @@ spec:
             initialDelaySeconds: {{ .Values.frontend.livenessProbe.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.frontend.livenessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.frontend.livenessProbe.failureThreshold }}
-          {{- end }}
-          {{- if .Values.frontend.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
               path: {{ .Values.frontend.readinessProbe.path }}
@@ -57,9 +55,6 @@ spec:
             initialDelaySeconds: {{ .Values.frontend.readinessProbe.initialDelaySeconds }}
             timeoutSeconds: {{ .Values.frontend.readinessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.frontend.readinessProbe.failureThreshold }}
-          {{- end }}
-          {{- if .Values.frontend.resources.enabled }}
           resources:
             {{- toYaml .Values.frontend.resources.value | nindent 12 }}
-          {{- end }}
 {{- end }}
