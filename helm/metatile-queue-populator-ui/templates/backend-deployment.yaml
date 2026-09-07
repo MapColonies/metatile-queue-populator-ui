@@ -82,6 +82,16 @@ spec:
             - name: config-volume
               mountPath: /usr/src/app/dist/config/default.json
               subPath: default.json
+            {{- if .Values.backend.env.appDb.ssl.secretName }}
+            - name: app-db-certs
+              mountPath: /etc/pki/app-db
+              readOnly: true
+            {{- end }}
+            {{- if .Values.backend.env.db.ssl.secretName }}
+            - name: db-certs
+              mountPath: /etc/pki/db
+              readOnly: true
+            {{- end }}
           {{- if .Values.backend.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
@@ -108,4 +118,14 @@ spec:
         - name: config-volume
           configMap:
             name: {{ include "metatile-queue-populator-ui.backend.fullname" . }}-config
+        {{- if .Values.backend.env.appDb.ssl.secretName }}
+        - name: app-db-certs
+          secret:
+            secretName: {{ .Values.backend.env.appDb.ssl.secretName }}
+        {{- end }}
+        {{- if .Values.backend.env.db.ssl.secretName }}
+        - name: db-certs
+          secret:
+            secretName: {{ .Values.backend.env.db.ssl.secretName }}
+        {{- end }}
 {{- end }}

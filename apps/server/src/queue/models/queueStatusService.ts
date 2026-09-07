@@ -3,6 +3,7 @@ import { inject, injectable } from 'tsyringe';
 import { PgBoss } from 'pg-boss';
 import { SERVICES } from '../../common/constants';
 import type { ConfigType } from '../../common/config';
+import { buildSslOptions } from '../../common/db/ssl';
 
 export interface QueueStat {
   queueName: string;
@@ -50,6 +51,7 @@ export class QueueStatusService {
     try {
       const dbConfig = (this.config.get as any)('db');
       if (dbConfig?.host) {
+        const sslOptions = buildSslOptions(dbConfig.ssl);
         const instance = new PgBoss({
           host: dbConfig.host,
           port: dbConfig.port,
@@ -58,6 +60,7 @@ export class QueueStatusService {
           database: dbConfig.database,
           schema: dbConfig.schema ?? 'pgboss',
           application_name: 'metatile-queue-populator-ui',
+          ssl: sslOptions || undefined,
         });
 
         // Attach error event listener so background pool connection timeouts do not crash the process

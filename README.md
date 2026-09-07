@@ -142,6 +142,25 @@ helm upgrade --install metatile-queue-populator-ui ./helm/metatile-queue-populat
   --set route.host="metatile-populator.apps.your-cluster.com"
 ```
 
+### PostgreSQL SSL / Certificate (mTLS) Authentication:
+
+Both `appDb` (TypeORM) and `db` (pg-boss) support independent password or certificate (mTLS) authentication. To mount certificates from a Kubernetes Secret:
+
+```bash
+helm upgrade --install metatile-queue-populator-ui ./helm/metatile-queue-populator-ui \
+  --namespace <your-namespace> \
+  --set backend.env.appDb.ssl.enabled=true \
+  --set backend.env.appDb.ssl.secretName="app-db-certs" \
+  --set backend.env.appDb.ssl.caPath="/etc/pki/app-db/ca.crt" \
+  --set backend.env.appDb.ssl.certPath="/etc/pki/app-db/client.crt" \
+  --set backend.env.appDb.ssl.keyPath="/etc/pki/app-db/client.key" \
+  --set backend.env.db.ssl.enabled=true \
+  --set backend.env.db.ssl.secretName="db-certs" \
+  --set backend.env.db.ssl.caPath="/etc/pki/db/ca.crt" \
+  --set backend.env.db.ssl.certPath="/etc/pki/db/client.crt" \
+  --set backend.env.db.ssl.keyPath="/etc/pki/db/client.key"
+```
+
 ---
 
 ## 📄 License

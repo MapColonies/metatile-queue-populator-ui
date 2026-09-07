@@ -51,6 +51,7 @@
     "migrate": false,
     "ssl": {
       "enabled": false,
+      "rejectUnauthorized": true,
       "ca": "",
       "key": "",
       "cert": ""
@@ -67,7 +68,11 @@
     "synchronize": true,
     "logging": false,
     "ssl": {
-      "enabled": false
+      "enabled": false,
+      "rejectUnauthorized": true,
+      "ca": "",
+      "key": "",
+      "cert": ""
     }
   },
   "raster": {

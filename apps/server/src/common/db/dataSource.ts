@@ -6,6 +6,8 @@ import { PresetEntity } from '../../presets/models/presetEntity';
 import { HistoryEntity } from '../../history/models/historyEntity';
 import { AuditLogEntity } from '../../audit/models/auditLogEntity';
 
+import { buildSslOptions } from './ssl';
+
 export interface DataSourceWrapper {
   instance: DataSource | null;
 }
@@ -19,6 +21,8 @@ export const createDataSource = async (config: ConfigType, logger: Logger): Prom
     return { instance: null };
   }
 
+  const sslOptions = buildSslOptions(dbConfig.ssl);
+
   const options: DataSourceOptions = {
     type: 'postgres',
     host: dbConfig.host,
@@ -30,7 +34,7 @@ export const createDataSource = async (config: ConfigType, logger: Logger): Prom
     synchronize: dbConfig.synchronize ?? false,
     logging: dbConfig.logging ?? false,
     entities: [PresetEntity, HistoryEntity, AuditLogEntity],
-    ssl: dbConfig.ssl?.enabled ? dbConfig.ssl : false,
+    ssl: sslOptions,
   };
 
   const dataSource = new DataSource(options);

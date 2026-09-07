@@ -133,7 +133,13 @@ backend:
       secretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
       usernameKey: ''
       passwordKey: ''
-      ssl: false
+      ssl:
+        enabled: false
+        rejectUnauthorized: true
+        secretName: '' # Optional K8s secret containing TLS certificates
+        caPath: ''     # e.g., /etc/pki/app-db/ca.crt
+        certPath: ''   # e.g., /etc/pki/app-db/client.crt
+        keyPath: ''    # e.g., /etc/pki/app-db/client.key
 
     # pg-boss DB (Queue Monitoring)
     db:
@@ -144,7 +150,13 @@ backend:
       secretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
       usernameKey: ''
       passwordKey: ''
-      ssl: false
+      ssl:
+        enabled: false
+        rejectUnauthorized: true
+        secretName: '' # Optional K8s secret containing TLS certificates
+        caPath: ''     # e.g., /etc/pki/db/ca.crt
+        certPath: ''   # e.g., /etc/pki/db/client.crt
+        keyPath: ''    # e.g., /etc/pki/db/client.key
 
 # -------------------------------------------------------------
 # OpenShift Route Exposure (Points to Frontend Nginx)

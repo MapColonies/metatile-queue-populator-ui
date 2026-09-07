@@ -47,7 +47,13 @@ data:
         "schema": {{ .Values.backend.env.appDb.schema | default "public" | quote }},
         "synchronize": false,
         "logging": false,
-        "ssl": { "enabled": {{ .Values.backend.env.appDb.ssl | default false }} }
+        "ssl": {
+          "enabled": {{ .Values.backend.env.appDb.ssl.enabled | default false }},
+          "rejectUnauthorized": {{ .Values.backend.env.appDb.ssl.rejectUnauthorized | default true }},
+          "ca": {{ .Values.backend.env.appDb.ssl.caPath | default "" | quote }},
+          "cert": {{ .Values.backend.env.appDb.ssl.certPath | default "" | quote }},
+          "key": {{ .Values.backend.env.appDb.ssl.keyPath | default "" | quote }}
+        }
       },
       "db": {
         "host": {{ .Values.backend.env.db.host | quote }},
@@ -56,7 +62,13 @@ data:
         "schema": {{ .Values.backend.env.db.schema | default "pgboss" | quote }},
         "createSchema": false,
         "migrate": false,
-        "ssl": { "enabled": {{ .Values.backend.env.db.ssl | default false }} }
+        "ssl": {
+          "enabled": {{ .Values.backend.env.db.ssl.enabled | default false }},
+          "rejectUnauthorized": {{ .Values.backend.env.db.ssl.rejectUnauthorized | default true }},
+          "ca": {{ .Values.backend.env.db.ssl.caPath | default "" | quote }},
+          "cert": {{ .Values.backend.env.db.ssl.certPath | default "" | quote }},
+          "key": {{ .Values.backend.env.db.ssl.keyPath | default "" | quote }}
+        }
       }
     }
 {{- end }}
