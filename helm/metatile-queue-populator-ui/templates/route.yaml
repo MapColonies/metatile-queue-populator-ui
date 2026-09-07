@@ -1,5 +1,5 @@
 {{- if and .Values.frontend.enabled .Values.route.enabled -}}
-{{- $cloudProviderFlavor := default .Values.global.cloudProvider.flavor .Values.cloudProvider.flavor -}}
+{{- $cloudProviderFlavor := include "metatile-queue-populator-ui.cloudProviderFlavor" . -}}
 {{- if eq $cloudProviderFlavor "openshift" -}}
 apiVersion: route.openshift.io/v1
 kind: Route
@@ -8,6 +8,16 @@ metadata:
   labels:
     {{- include "metatile-queue-populator-ui.labels" . | nindent 4 }}
     {{- include "metatile-queue-populator-ui.frontend.selectorLabels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.route.rewriteTarget }}
+    haproxy.router.openshift.io/rewrite-target: {{ .Values.route.rewriteTarget | quote }}
+    {{- end }}
+    {{- if .Values.route.timeout.enabled }}
+    haproxy.router.openshift.io/timeout: {{ .Values.route.timeout.duration | default "60s" | quote }}
+    {{- end }}
+    {{- if .Values.route.annotations }}
+    {{- toYaml .Values.route.annotations | nindent 4 }}
+    {{- end }}
 spec:
   path: {{ .Values.route.path | default "/" }}
   {{- if .Values.route.host }}
@@ -21,8 +31,13 @@ spec:
     targetPort: http
   {{- if .Values.route.tls.enabled }}
   tls:
-    termination: {{ .Values.route.tls.termination | default "edge" }}
-    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy | default "Redirect" }}
+    termination: {{ .Values.route.tls.termination | default "edge" | quote }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy | default "Redirect" | quote }}
+    {{- if .Values.route.tls.useCerts }}
+    certificate: {{ .Values.route.tls.certificate | quote }}
+    key: {{ .Values.route.tls.key | quote }}
+    caCertificate: {{ .Values.route.tls.caCertificate | quote }}
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}

@@ -10,12 +10,12 @@
       "extra-files": [
         {
           "type": "yaml",
-          "path": "helm/Chart.yaml",
+          "path": "../../helm/metatile-queue-populator-ui/Chart.yaml",
           "jsonpath": "$.version"
         },
         {
           "type": "yaml",
-          "path": "helm/Chart.yaml",
+          "path": "../../helm/metatile-queue-populator-ui/Chart.yaml",
           "jsonpath": "$.appVersion"
         },
         {

@@ -20,8 +20,6 @@ cloudProvider:
 
 # -------------------------------------------------------------
 # Chart Managed Secrets (Optional)
-# If enabled: generates a Secret object from these values.
-# If disabled: deployment will use external existing secret names.
 # -------------------------------------------------------------
 secrets:
   enabled: true
@@ -150,7 +148,28 @@ route:
   enabled: true
   host: ''
   path: /
+  timeout:
+    enabled: true
+    duration: 60s # supported units (us, ms, s, m, h, d)
+  rewriteTarget: ''
+  annotations: {}
   tls:
     enabled: true
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+    useCerts: false
+    certificate: ''
+    key: ''
+    caCertificate: ''
+
+# -------------------------------------------------------------
+# Optional Kubernetes Ingress (Non-OpenShift clusters)
+# -------------------------------------------------------------
+ingress:
+  enabled: false
+  className: ''
+  annotations: {}
+  path: /
+  pathType: Prefix
+  hosts: []
+  tls: []
