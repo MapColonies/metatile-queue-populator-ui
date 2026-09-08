@@ -13,8 +13,9 @@ RUN pnpm --filter @metatile-queue-populator-ui/ui build
 
 FROM nginxinc/nginx-unprivileged:alpine AS production
 
+RUN rm -f /etc/nginx/conf.d/*
 COPY --from=builder /app/apps/ui/dist /usr/share/nginx/html
-COPY apps/ui/nginx.conf /etc/nginx/templates/nginx.conf.template
+COPY apps/ui/nginx.conf /etc/nginx/templates/default.conf.template
 
 ENV BACKEND_SERVICE_HOST="metatile-queue-populator-ui-backend"
 ENV BACKEND_SERVICE_PORT="8080"

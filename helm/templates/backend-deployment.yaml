@@ -32,8 +32,6 @@ spec:
       {{- end }}
       securityContext:
         runAsNonRoot: true
-        runAsUser: 1001
-        fsGroup: 1001
       containers:
         - name: backend
           image: {{ $registryUrl }}{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag | default .Chart.AppVersion }}
@@ -45,6 +43,10 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
+            - name: CONFIG_OFFLINE_MODE
+              value: "true"
+            - name: TELEMETRY_TRACING_ENABLED
+              value: "false"
             - name: SERVER_PORT
               value: {{ .Values.backend.service.targetPort | default 8080 | quote }}
             {{- if or .Values.secrets.enabled .Values.backend.env.raster.tokenSecretName }}
@@ -80,7 +82,7 @@ spec:
             {{- end }}
           volumeMounts:
             - name: config-volume
-              mountPath: /usr/src/app/dist/config/default.json
+              mountPath: /app/apps/server/dist/config/default.json
               subPath: default.json
             {{- if .Values.backend.env.appDb.ssl.secretName }}
             - name: app-db-certs

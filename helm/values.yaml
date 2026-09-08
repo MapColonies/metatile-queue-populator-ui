@@ -105,7 +105,7 @@ backend:
     initialDelaySeconds: 10
     timeoutSeconds: 5
     failureThreshold: 6
-    path: /readiness
+    path: /liveness
 
   env:
     logLevel: info

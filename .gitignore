@@ -9,3 +9,15 @@ coverage
 .env.local
 .scratch
 dist
+helm/*.values.yaml
+helm/*.values.yml
+helm/*-values.yaml
+helm/*-values.yml
+helm/values-*.yaml
+helm/values-*.yml
+*.secret.yaml
+*.secret.yml
+*.pem
+*.key
+*.crt
+*.cert

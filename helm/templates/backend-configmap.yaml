@@ -18,15 +18,24 @@ data:
       "telemetry": {
         "metrics": {},
         "tracing": { "isEnabled": false },
+        "shared": {},
         "logger": {
           "level": {{ .Values.backend.env.logLevel | default "info" | quote }},
-          "prettyPrint": {{ .Values.backend.env.logPrettyPrintEnabled | default false }}
+          "prettyPrint": {{ .Values.backend.env.logPrettyPrintEnabled | default false }},
+          "opentelemetryOptions": {
+            "enabled": false
+          }
         }
       },
       "server": {
         "port": {{ .Values.backend.service.port | default 8080 }},
         "request": { "payload": { "limit": {{ .Values.backend.env.requestPayloadLimit | default "20mb" | quote }} } },
         "response": { "compression": { "enabled": {{ .Values.backend.env.responseCompressionEnabled | default true }} } }
+      },
+      "app": {
+        "projectName": "buildings",
+        "tilesBatchSize": 10000,
+        "metatileSize": 8
       },
       "populator": {
         "url": {{ .Values.backend.env.populatorUrl | quote }}

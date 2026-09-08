@@ -17,20 +17,20 @@ RUN apk add --no-cache dumb-init
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
-COPY apps/server/package.json ./
-COPY --from=builder /app/apps/server/dist ./dist
-COPY --from=builder /app/apps/server/dist/config ./dist/config
-COPY --from=builder /app/apps/server/dist/assets ./dist/assets
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/server/node_modules ./dist/node_modules
+COPY --from=builder /app/apps/server ./apps/server
 
-RUN chown -R 1001:0 /usr/src/app && chmod -R g=u /usr/src/app
+# Symlink /usr/src/app -> /app/apps/server so Helm ConfigMap volumeMount (/usr/src/app/dist/config/default.json) works seamlessly
+RUN mkdir -p /usr/src && ln -s /app/apps/server /usr/src/app
+
+RUN chown -R 1001:0 /app /usr/src && chmod -R g=u /app /usr/src
 
 USER 1001
 EXPOSE 8080
 
-WORKDIR /usr/src/app/dist
+WORKDIR /app/apps/server/dist
 
 CMD ["dumb-init", "node", "--import", "./instrumentation.mjs", "./index.js"]
