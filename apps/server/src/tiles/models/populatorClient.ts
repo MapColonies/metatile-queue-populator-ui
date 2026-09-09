@@ -13,6 +13,72 @@ export interface PostTilesListResponse {
   message: string;
 }
 
+export function sanitizeArea(area: unknown): unknown {
+  if (!area || typeof area !== 'object') {
+    return area;
+  }
+
+  // If bounding box array [minx, miny, maxx, maxy], keep as-is
+  if (Array.isArray(area)) {
+    return area;
+  }
+
+  const areaObj = area as Record<string, any>;
+
+  // If FeatureCollection
+  if (areaObj.type === 'FeatureCollection' && Array.isArray(areaObj.features)) {
+    return {
+      ...areaObj,
+      features: areaObj.features.map((f: any) => {
+        if (f && typeof f === 'object' && f.type === 'Feature') {
+          return {
+            ...f,
+            properties: f.properties && typeof f.properties === 'object' ? f.properties : {},
+          };
+        }
+        return f;
+      }),
+    };
+  }
+
+  // If Feature
+  if (areaObj.type === 'Feature') {
+    return {
+      ...areaObj,
+      properties: areaObj.properties && typeof areaObj.properties === 'object' ? areaObj.properties : {},
+    };
+  }
+
+  // If raw Geometry (e.g. Polygon, MultiPolygon)
+  if (areaObj.coordinates && typeof areaObj.type === 'string') {
+    return {
+      type: 'Feature',
+      properties: {},
+      geometry: areaObj,
+    };
+  }
+
+  return area;
+}
+
+export function sanitizeTilesAreaBody(body: unknown): unknown {
+  if (Array.isArray(body)) {
+    return body.map((item) => sanitizeTilesAreaBody(item));
+  }
+
+  if (body && typeof body === 'object') {
+    const obj = body as Record<string, any>;
+    if ('area' in obj) {
+      return {
+        ...obj,
+        area: sanitizeArea(obj.area),
+      };
+    }
+  }
+
+  return body;
+}
+
 @injectable()
 export class PopulatorClient {
   private readonly populatorUrl: string;
@@ -30,6 +96,8 @@ export class PopulatorClient {
       url.searchParams.set('force', String(force));
     }
 
+    const sanitizedBody = sanitizeTilesAreaBody(body);
+
     this.logger.info({ msg: 'Forwarding /tiles/area request to populator', targetUrl: url.toString() });
 
     try {
@@ -38,7 +106,7 @@ export class PopulatorClient {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(sanitizedBody),
       });
 
       if (!response.ok) {

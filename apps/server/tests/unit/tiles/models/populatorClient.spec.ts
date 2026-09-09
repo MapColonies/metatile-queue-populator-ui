@@ -36,6 +36,54 @@ describe('PopulatorClient', async () => {
       expect(response).toEqual(mockResponse);
     });
 
+    it('should sanitize Feature with null properties to empty object', async () => {
+      const mockResponse = { message: 'OK' };
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockResponse),
+      });
+
+      const body = {
+        minZoom: 0,
+        maxZoom: 10,
+        priority: 0,
+        area: {
+          type: 'Feature',
+          properties: null,
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[35, 32], [36, 32], [36, 33], [35, 33], [35, 32]]],
+          },
+        },
+      };
+
+      const expectedSanitized = {
+        minZoom: 0,
+        maxZoom: 10,
+        priority: 0,
+        area: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[35, 32], [36, 32], [36, 33], [35, 33], [35, 32]]],
+          },
+        },
+      };
+
+      const response = await populatorClient.postTilesArea(body, false);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:8081/tiles/area?force=false',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(expectedSanitized),
+        })
+      );
+      expect(response).toEqual(mockResponse);
+    });
+
     it('should throw HttpError when populator returns error status', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,

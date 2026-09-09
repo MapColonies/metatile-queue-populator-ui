@@ -67,8 +67,15 @@ export class SpatialConverter {
 
   private parseKml(kmlString: string): FeatureCollection {
     const dom = new DOMParser().parseFromString(kmlString, 'text/xml');
-    const geojson = kml(dom);
-    return geojson as FeatureCollection;
+    const geojson = kml(dom) as FeatureCollection;
+    if (Array.isArray(geojson.features)) {
+      geojson.features.forEach((f) => {
+        if (f && typeof f === 'object' && (!f.properties || typeof f.properties !== 'object')) {
+          f.properties = {};
+        }
+      });
+    }
+    return geojson;
   }
 
   private parseWkt(wktString: string): FeatureCollection {
@@ -92,13 +99,24 @@ export class SpatialConverter {
     const parsed = JSON.parse(geoJsonString) as Record<string, any>;
 
     if (parsed.type === 'FeatureCollection') {
+      if (Array.isArray(parsed.features)) {
+        parsed.features.forEach((f: any) => {
+          if (f && typeof f === 'object' && (!f.properties || typeof f.properties !== 'object')) {
+            f.properties = {};
+          }
+        });
+      }
       return parsed as FeatureCollection;
     }
 
     if (parsed.type === 'Feature') {
+      const feature = {
+        ...parsed,
+        properties: parsed.properties && typeof parsed.properties === 'object' ? parsed.properties : {},
+      } as Feature;
       return {
         type: 'FeatureCollection',
-        features: [parsed as Feature],
+        features: [feature],
       };
     }
 

@@ -118,7 +118,16 @@ export const AreaForm: React.FC<AreaFormProps> = ({
         area:
           selectedArea.type === "bbox"
             ? selectedArea.bbox
-            : selectedArea.geojson,
+            : selectedArea.geojson?.type === "Feature"
+              ? {
+                  ...selectedArea.geojson,
+                  properties:
+                    selectedArea.geojson.properties &&
+                    typeof selectedArea.geojson.properties === "object"
+                      ? selectedArea.geojson.properties
+                      : {},
+                }
+              : selectedArea.geojson,
       };
 
       const response = await axios.post("/api/presets", payload);
@@ -170,7 +179,36 @@ export const AreaForm: React.FC<AreaFormProps> = ({
       if (selectedArea.type === "bbox") {
         payload.area = selectedArea.bbox;
       } else {
-        payload.area = selectedArea.geojson;
+        const geojson: any = selectedArea.geojson;
+        if (geojson && typeof geojson === "object") {
+          if (geojson.type === "Feature") {
+            payload.area = {
+              ...geojson,
+              properties:
+                geojson.properties && typeof geojson.properties === "object"
+                  ? geojson.properties
+                  : {},
+            };
+          } else if (
+            geojson.type === "FeatureCollection" &&
+            Array.isArray(geojson.features)
+          ) {
+            payload.area = {
+              ...geojson,
+              features: geojson.features.map((f: any) => ({
+                ...f,
+                properties:
+                  f?.properties && typeof f?.properties === "object"
+                    ? f.properties
+                    : {},
+              })),
+            };
+          } else {
+            payload.area = geojson;
+          }
+        } else {
+          payload.area = geojson;
+        }
       }
 
       const response = await axios.post("/api/tiles/area", payload, {

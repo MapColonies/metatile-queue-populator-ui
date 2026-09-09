@@ -245,6 +245,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       featureProjection: "EPSG:3857",
       dataProjection: "EPSG:4326",
     });
+    if (!geojsonObject.properties || typeof geojsonObject.properties !== "object") {
+      geojsonObject.properties = {};
+    }
 
     if (drawMode === "bbox") {
       const extent = geometry.getExtent();
@@ -534,6 +537,9 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           featureProjection: "EPSG:3857",
           dataProjection: "EPSG:4326",
         });
+        if (!obj.properties || typeof obj.properties !== "object") {
+          obj.properties = {};
+        }
         textToCopy = JSON.stringify(obj, null, 2);
       } else if (format === "wkt") {
         const wktFormat = new WKT();
