@@ -1,0 +1,14 @@
+node_modules
+apps/*/node_modules
+dist
+apps/*/dist
+.git
+.github
+*.log
+.coverage
+coverage
+helm/*.values.yaml
+helm/*-values.yaml
+helm/*.secret.yaml
+apps/server/config/local*.json
+**/local*.json

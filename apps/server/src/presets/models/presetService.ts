@@ -22,7 +22,7 @@ export interface AreaPreset {
   createdAt: string;
 }
 
-@injectable()
+@singleton()
 export class PresetService {
   private inMemoryPresets: AreaPreset[] = [];
   private presetRepository: Repository<PresetEntity> | null = null;

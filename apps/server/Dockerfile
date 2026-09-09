@@ -23,6 +23,8 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server ./apps/server
 
+RUN rm -f /app/apps/server/dist/config/local*.json /app/apps/server/config/local*.json
+
 # Symlink /usr/src/app -> /app/apps/server so Helm ConfigMap volumeMount (/usr/src/app/dist/config/default.json) works seamlessly
 RUN mkdir -p /usr/src && ln -s /app/apps/server /usr/src/app
 

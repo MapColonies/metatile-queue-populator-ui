@@ -28,9 +28,9 @@ export class RasterConfigController {
       const cswUrl = (this.config.get as any)('raster.cswUrl');
       let token: string | undefined;
       try {
-        token = (this.config.get as any)('raster.token');
+        token = (this.config.get as any)('raster.token') || process.env.RASTER_TOKEN;
       } catch {
-        token = undefined;
+        token = process.env.RASTER_TOKEN || undefined;
       }
 
       let defaultMap: DefaultMapConfig | undefined;

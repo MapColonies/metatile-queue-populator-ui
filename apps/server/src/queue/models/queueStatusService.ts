@@ -1,5 +1,5 @@
 import type { Logger } from '@map-colonies/js-logger';
-import { inject, injectable } from 'tsyringe';
+import { inject, injectable, singleton } from 'tsyringe';
 import { PgBoss } from 'pg-boss';
 import { SERVICES } from '../../common/constants';
 import type { ConfigType } from '../../common/config';
@@ -29,7 +29,7 @@ export interface QueueOverview {
   };
 }
 
-@injectable()
+@singleton()
 export class QueueStatusService {
   private readonly populatorUrl: string;
   private readonly projectName: string;
@@ -52,11 +52,13 @@ export class QueueStatusService {
       const dbConfig = (this.config.get as any)('db');
       if (dbConfig?.host) {
         const sslOptions = buildSslOptions(dbConfig.ssl);
+        const user = process.env.DB_USERNAME || dbConfig.username;
+        const password = process.env.DB_PASSWORD || dbConfig.password;
         const instance = new PgBoss({
           host: dbConfig.host,
           port: dbConfig.port,
-          user: dbConfig.username,
-          password: dbConfig.password,
+          user,
+          password,
           database: dbConfig.database,
           schema: dbConfig.schema ?? 'pgboss',
           application_name: 'metatile-queue-populator-ui',

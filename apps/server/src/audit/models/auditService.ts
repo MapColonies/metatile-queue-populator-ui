@@ -1,5 +1,5 @@
 import type { Logger } from '@map-colonies/js-logger';
-import { inject, injectable } from 'tsyringe';
+import { inject, injectable, singleton } from 'tsyringe';
 import { randomUUID } from 'crypto';
 import type { Repository, FindOptionsWhere } from 'typeorm';
 import { Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
@@ -29,7 +29,7 @@ export interface AuditQueryOptions {
   pathPrefix?: string;
 }
 
-@injectable()
+@singleton()
 export class AuditService {
   private inMemoryAuditLogs: AuditRecord[] = [];
   private auditRepository: Repository<AuditLogEntity> | null = null;

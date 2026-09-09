@@ -99,8 +99,15 @@ export class ServerBuilder {
 
       res.end = function (this: express.Response, ...args: any[]) {
         const durationMs = Date.now() - startTime;
-        // Intercept and persist non-metrics and non-static requests into persistent audit_logs
-        if (!req.path.startsWith('/metrics') && !req.path.startsWith('/docs') && req.path !== '/favicon.ico') {
+        // Intercept and persist non-metrics, non-probe, non-audit and non-static requests into persistent audit_logs
+        if (
+          !req.path.startsWith('/metrics') &&
+          !req.path.startsWith('/docs') &&
+          !req.path.startsWith('/liveness') &&
+          !req.path.startsWith('/readiness') &&
+          !req.path.startsWith('/audit') &&
+          req.path !== '/favicon.ico'
+        ) {
           void auditService.logEvent({
             method: req.method,
             path: req.path,

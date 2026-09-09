@@ -25,7 +25,7 @@ export interface HistoryQueryOptions {
   to?: string;
 }
 
-@injectable()
+@singleton()
 export class HistoryService {
   private inMemoryRecords: HistoryRecord[] = [];
   private historyRepository: Repository<HistoryEntity> | null = null;

@@ -114,4 +114,34 @@ describe('createDataSource', () => {
       })
     );
   });
+
+  it('falls back to APP_DB_USERNAME and APP_DB_PASSWORD environment variables', async () => {
+    process.env.APP_DB_USERNAME = 'env_user';
+    process.env.APP_DB_PASSWORD = 'env_password';
+
+    const mockConfig = {
+      get: vi.fn().mockReturnValue({
+        host: 'localhost',
+        port: 5432,
+        database: 'test_db',
+        ssl: { enabled: false },
+      }),
+    } as any;
+
+    try {
+      const result = await createDataSource(mockConfig, mockLogger);
+      expect(result.instance).not.toBeNull();
+      expect(DataSource).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'postgres',
+          host: 'localhost',
+          username: 'env_user',
+          password: 'env_password',
+        })
+      );
+    } finally {
+      delete process.env.APP_DB_USERNAME;
+      delete process.env.APP_DB_PASSWORD;
+    }
+  });
 });
