@@ -27,7 +27,10 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import StorageIcon from "@mui/icons-material/Storage";
+import Button from "@mui/material/Button";
 import axios from "axios";
+import { usePopulator } from "../contexts/PopulatorContext";
+import { getTargetEmoji } from "../types/discovery";
 
 interface QueueStat {
   queueName: string;
@@ -42,6 +45,9 @@ interface QueueOverview {
   status: "UP" | "DEGRADED" | "DOWN";
   timestamp: string;
   populatorServiceUrl: string;
+  targetId?: string;
+  targetName?: string;
+  databaseName?: string;
   queues: QueueStat[];
   summary: {
     totalJobs: number;
@@ -53,6 +59,7 @@ interface QueueOverview {
 }
 
 export const QueueDashboardView: React.FC = () => {
+  const { activeTarget, targets, setActiveTargetId } = usePopulator();
   const [data, setData] = useState<QueueOverview | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
@@ -62,7 +69,9 @@ export const QueueDashboardView: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get<QueueOverview>("/api/queue/status");
+      const response = await axios.get<QueueOverview>("/api/queue/status", {
+        params: { target: activeTarget?.id },
+      });
       setData(response.data);
     } catch (err: any) {
       setError(
@@ -77,13 +86,13 @@ export const QueueDashboardView: React.FC = () => {
 
   useEffect(() => {
     fetchStatus();
-  }, []);
+  }, [activeTarget?.id]);
 
   useEffect(() => {
     if (!autoRefresh) return;
     const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, activeTarget?.id]);
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, margin: "0 auto", width: "100%" }}>
@@ -138,6 +147,85 @@ export const QueueDashboardView: React.FC = () => {
           </Tooltip>
         </Stack>
       </Box>
+
+      {/* Target Pipeline Switcher */}
+      {targets.length > 0 && (
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 1.5,
+            mb: 3,
+            borderRadius: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 1.5,
+            bgcolor: "rgba(255, 255, 255, 0.02)",
+            borderColor: "divider",
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ px: 0.5, fontWeight: 700, color: "text.secondary" }}
+            >
+              ACTIVE QUEUE PIPELINE:
+            </Typography>
+            {targets.map((target) => {
+              const isSelected = target.id === activeTarget?.id;
+              return (
+                <Button
+                  key={target.id}
+                  variant={isSelected ? "contained" : "outlined"}
+                  color={isSelected ? "primary" : "inherit"}
+                  size="small"
+                  onClick={() => setActiveTargetId(target.id)}
+                  startIcon={
+                    <Box
+                      component="span"
+                      sx={{ fontSize: "1rem", lineHeight: 1 }}
+                    >
+                      {target.emoji ||
+                        getTargetEmoji(target.projectName || target.id)}
+                    </Box>
+                  }
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: "none",
+                    fontWeight: isSelected ? 700 : 500,
+                    px: 1.5,
+                    py: 0.4,
+                    borderColor: isSelected
+                      ? "primary.main"
+                      : "rgba(255, 255, 255, 0.15)",
+                  }}
+                >
+                  {target.name}
+                </Button>
+              );
+            })}
+          </Box>
+
+          {data && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                Target Database:{" "}
+                <code style={{ color: "#38bdf8" }}>
+                  {data.databaseName || activeTarget?.dbName}
+                </code>
+              </Typography>
+            </Box>
+          )}
+        </Paper>
+      )}
 
       {loading && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
 

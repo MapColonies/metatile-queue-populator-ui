@@ -1,6 +1,6 @@
 {
   "name": "metatile-queue-populator-ui-monorepo",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "private": true,
   "description": "Monorepo for Metatile Queue Populator UI and BFF Server",
   "scripts": {

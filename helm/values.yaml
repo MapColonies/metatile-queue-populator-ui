@@ -1,7 +1,7 @@
 global:
   cloudProvider:
-    dockerRegistryUrl: 'acrarolibotnonprod.azurecr.io/'
-    imagePullSecretName: ''
+    dockerRegistryUrl: "acrarolibotnonprod.azurecr.io/"
+    imagePullSecretName: ""
     flavor: openshift
   tracing: {}
   metrics: {}
@@ -14,8 +14,8 @@ mclabels:
     enabled: true
 
 cloudProvider:
-  dockerRegistryUrl: 'acrarolibotnonprod.azurecr.io/'
-  imagePullSecretName: ''
+  dockerRegistryUrl: "acrarolibotnonprod.azurecr.io/"
+  imagePullSecretName: ""
   flavor: openshift
 
 # Amount of replica sets / deployment revisions to keep
@@ -26,12 +26,12 @@ revisionHistoryLimit: 2
 # -------------------------------------------------------------
 secrets:
   enabled: true
-  name: '' # if empty, defaults to '<release-name>-metatile-queue-populator-ui-secret'
-  rasterToken: ''
-  dbUsername: 'postgres'
-  dbPassword: ''
-  appDbUsername: 'postgres'
-  appDbPassword: ''
+  name: "" # if empty, defaults to '<release-name>-metatile-queue-populator-ui-secret'
+  rasterToken: ""
+  dbUsername: "postgres"
+  dbPassword: ""
+  appDbUsername: "postgres"
+  appDbPassword: ""
 
 # -------------------------------------------------------------
 # Frontend (React UI + Nginx Reverse Proxy)
@@ -42,7 +42,7 @@ frontend:
   revisionHistoryLimit: 2
   image:
     repository: metatile-queue-populator-ui-client
-    tag: '1.0.0'
+    tag: "1.0.0"
     pullPolicy: IfNotPresent
   service:
     port: 8080
@@ -79,7 +79,7 @@ backend:
   revisionHistoryLimit: 2
   image:
     repository: metatile-queue-populator-ui-server
-    tag: '1.0.0'
+    tag: "1.0.0"
     pullPolicy: IfNotPresent
   service:
     port: 8080
@@ -112,79 +112,89 @@ backend:
     logPrettyPrintEnabled: false
     responseCompressionEnabled: true
     requestPayloadLimit: 20mb
-    populatorUrl: 'https://render-buildings-mqp-route-vector-dev.apps.j1lk3njp.eastus.aroapp.io/'
-    
+    populatorUrl: "https://render-buildings-mqp-route-vector-dev.apps.j1lk3njp.eastus.aroapp.io/"
+
     # Raster Configuration
     raster:
-      cswUrl: 'https://catalog.mapcolonies.net/api/raster/v1/csw'
-      tokenSecretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
-      tokenSecretKey: ''
+      cswUrl: "https://catalog.mapcolonies.net/api/raster/v1/csw"
+      tokenSecretName: "" # Leave empty to use chart-managed secret when secrets.enabled is true
+      tokenSecretKey: ""
       defaultMap:
         useOsm: true
-        productId: ''
-        productType: ''
+        productId: ""
+        productType: ""
 
     # Application DB (PostgreSQL - Presets, History, Audit)
     appDb:
-      host: 'postgres-prod.mapcolonies.net'
+      host: "postgres-prod.mapcolonies.net"
       port: 5432
-      database: 'metatile-queue-populator-ui'
-      schema: 'public'
-      secretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
-      usernameKey: ''
-      passwordKey: ''
+      database: "metatile-queue-populator-ui"
+      schema: "public"
+      secretName: "" # Leave empty to use chart-managed secret when secrets.enabled is true
+      usernameKey: ""
+      passwordKey: ""
       ssl:
         enabled: false
         rejectUnauthorized: true
-        secretName: '' # Optional K8s secret containing TLS certificates
-        caPath: ''     # e.g., /etc/pki/app-db/ca.crt
-        certPath: ''   # e.g., /etc/pki/app-db/client.crt
-        keyPath: ''    # e.g., /etc/pki/app-db/client.key
+        secretName: "" # Optional K8s secret containing TLS certificates
+        caPath: "" # e.g., /etc/pki/app-db/ca.crt
+        certPath: "" # e.g., /etc/pki/app-db/client.crt
+        keyPath: "" # e.g., /etc/pki/app-db/client.key
 
     # pg-boss DB (Queue Monitoring)
     db:
-      host: 'postgres-prod.mapcolonies.net'
+      host: "postgres-prod.mapcolonies.net"
       port: 5432
-      database: 'vector-rendering-buildings'
-      schema: 'pgboss'
-      secretName: '' # Leave empty to use chart-managed secret when secrets.enabled is true
-      usernameKey: ''
-      passwordKey: ''
+      database: "vector-rendering-buildings"
+      schema: "pgboss"
+      secretName: "" # Leave empty to use chart-managed secret when secrets.enabled is true
+      usernameKey: ""
+      passwordKey: ""
       ssl:
         enabled: false
         rejectUnauthorized: true
-        secretName: '' # Optional K8s secret containing TLS certificates
-        caPath: ''     # e.g., /etc/pki/db/ca.crt
-        certPath: ''   # e.g., /etc/pki/db/client.crt
-        keyPath: ''    # e.g., /etc/pki/db/client.key
+        secretName: "" # Optional K8s secret containing TLS certificates
+        caPath: "" # e.g., /etc/pki/db/ca.crt
+        certPath: "" # e.g., /etc/pki/db/client.crt
+        keyPath: "" # e.g., /etc/pki/db/client.key
+
+# -------------------------------------------------------------
+# Dynamic Service Auto-Discovery
+# -------------------------------------------------------------
+discovery:
+  enabled: false
+  labelSelector: "app.kubernetes.io/name=metatile-queue-populator"
+  partOfPrefix: "rendering-"
+  cacheTtlMs: 30000
+  dbNamePattern: "vector-rendering-{project}"
 
 # -------------------------------------------------------------
 # OpenShift Route Exposure (Points to Frontend Nginx)
 # -------------------------------------------------------------
 route:
   enabled: true
-  host: ''
+  host: ""
   path: /
   timeout:
     enabled: true
     duration: 60s # supported units (us, ms, s, m, h, d)
-  rewriteTarget: ''
+  rewriteTarget: ""
   annotations: {}
   tls:
     enabled: true
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
     useCerts: false
-    certificate: ''
-    key: ''
-    caCertificate: ''
+    certificate: ""
+    key: ""
+    caCertificate: ""
 
 # -------------------------------------------------------------
 # Optional Kubernetes Ingress (Non-OpenShift clusters)
 # -------------------------------------------------------------
 ingress:
   enabled: false
-  className: ''
+  className: ""
   annotations: {}
   path: /
   pathType: Prefix

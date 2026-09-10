@@ -40,9 +40,7 @@ describe('createDataSource', () => {
 
     const result = await createDataSource(mockConfig, mockLogger);
     expect(result.instance).toBeNull();
-    expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ msg: expect.stringContaining('No appDb configuration found') })
-    );
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.objectContaining({ msg: expect.stringContaining('No appDb configuration found') }));
   });
 
   it('creates DataSource with password and ssl false by default', async () => {

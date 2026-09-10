@@ -90,4 +90,28 @@ describe('QueueStatusService', async () => {
       })
     );
   });
+
+  it('should dynamically switch database and queue names when targetId is provided', async () => {
+    const mockDiscoveryService = {
+      getTarget: vi.fn().mockResolvedValue({
+        id: 'rendering-osm',
+        name: 'OSM',
+        projectName: 'osm',
+        url: 'http://rendering-osm:8080',
+        dbName: 'vector-rendering-osm',
+      }),
+    };
+    const multiDbQueueService = new QueueStatusService(configMock as any, logger, mockDiscoveryService as any);
+
+    const overview = await multiDbQueueService.getQueueStatus('rendering-osm');
+
+    expect(overview.targetId).toBe('rendering-osm');
+    expect(overview.targetName).toBe('OSM');
+    expect(overview.databaseName).toBe('vector-rendering-osm');
+    expect(PgBoss).toHaveBeenCalledWith(
+      expect.objectContaining({
+        database: 'vector-rendering-osm',
+      })
+    );
+  });
 });

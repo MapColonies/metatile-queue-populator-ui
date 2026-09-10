@@ -30,6 +30,9 @@ spec:
       imagePullSecrets:
         - name: {{ $imagePullSecret | quote }}
       {{- end }}
+      {{- if .Values.discovery.enabled }}
+      serviceAccountName: {{ include "metatile-queue-populator-ui.backend.fullname" . }}
+      {{- end }}
       securityContext:
         runAsNonRoot: true
       containers:

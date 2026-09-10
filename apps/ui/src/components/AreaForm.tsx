@@ -26,6 +26,8 @@ import LayersIcon from "@mui/icons-material/Layers";
 import { SelectedArea } from "../types/geometry.ts";
 import { TileEstimationWidget } from "./TileEstimationWidget.tsx";
 import { SpatialDropzone } from "./SpatialDropzone.tsx";
+import { TargetConfirmationCard } from "./TargetConfirmationCard.tsx";
+import { usePopulator } from "../contexts/PopulatorContext.tsx";
 import axios from "axios";
 
 interface Preset {
@@ -60,6 +62,7 @@ export const AreaForm: React.FC<AreaFormProps> = ({
   const [priority, setPriority] = useState<number>(0);
   const [force, setForce] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const { activeTarget } = usePopulator();
   const [presets, setPresets] = useState<Preset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [saveDialogOpen, setSaveDialogOpen] = useState<boolean>(false);
@@ -212,14 +215,18 @@ export const AreaForm: React.FC<AreaFormProps> = ({
       }
 
       const response = await axios.post("/api/tiles/area", payload, {
-        params: { force },
+        params: { force, target: activeTarget?.id },
       });
 
       // Record in Submission History
       await axios
         .post("/api/history", {
           type: "area",
-          parameters: payload,
+          parameters: {
+            ...payload,
+            target: activeTarget?.id,
+            targetName: activeTarget?.name,
+          },
           status: "SUCCESS",
           responseMessage: response.data.message || "Queued successfully",
         })
@@ -244,6 +251,8 @@ export const AreaForm: React.FC<AreaFormProps> = ({
           parameters: {
             minZoom: zoomRange[0],
             maxZoom: zoomRange[1],
+            target: activeTarget?.id,
+            targetName: activeTarget?.name,
             area:
               selectedArea.type === "bbox"
                 ? selectedArea.bbox
@@ -538,6 +547,8 @@ export const AreaForm: React.FC<AreaFormProps> = ({
               }
             />
           )}
+
+          {!isPresetMode && <TargetConfirmationCard />}
 
           {/* Submit / Save Preset Button */}
           {isPresetMode ? (

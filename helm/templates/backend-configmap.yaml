@@ -40,6 +40,13 @@ data:
       "populator": {
         "url": {{ .Values.backend.env.populatorUrl | quote }}
       },
+      "discovery": {
+        "enabled": {{ .Values.discovery.enabled | default false }},
+        "labelSelector": {{ .Values.discovery.labelSelector | default "app.kubernetes.io/name=metatile-queue-populator" | quote }},
+        "partOfPrefix": {{ .Values.discovery.partOfPrefix | default "rendering-" | quote }},
+        "cacheTtlMs": {{ .Values.discovery.cacheTtlMs | default 30000 }},
+        "dbNamePattern": {{ .Values.discovery.dbNamePattern | default "vector-rendering-{project}" | quote }}
+      },
       "raster": {
         "cswUrl": {{ .Values.backend.env.raster.cswUrl | quote }},
         "token": "",

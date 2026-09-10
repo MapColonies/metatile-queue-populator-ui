@@ -20,6 +20,10 @@ export class HistoryEntity {
   @Column({ type: 'varchar' })
   public status!: 'SUCCESS' | 'FAILED';
 
+  @Index()
+  @Column({ type: 'varchar', nullable: true })
+  public target?: string;
+
   @Column({ type: 'text', nullable: true })
   public responseMessage?: string;
 }

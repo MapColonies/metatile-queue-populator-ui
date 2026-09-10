@@ -4,8 +4,8 @@ import { injectable, inject } from 'tsyringe';
 import { PopulatorClient } from '../models/populatorClient';
 import { TileEstimationService, EstimationResult } from '../models/estimationService';
 
-type PostTilesAreaHandler = RequestHandler<undefined, { message: string }, unknown, { force?: string }>;
-type PostTilesListHandler = RequestHandler<undefined, { message: string }, unknown, { force?: string }>;
+type PostTilesAreaHandler = RequestHandler<undefined, { message: string }, unknown, { force?: string; target?: string }>;
+type PostTilesListHandler = RequestHandler<undefined, { message: string }, unknown, { force?: string; target?: string }>;
 type PostTilesEstimateHandler = RequestHandler<undefined, EstimationResult>;
 
 @injectable()
@@ -19,7 +19,11 @@ export class TilesController {
     try {
       const forceQuery = req.query.force as unknown;
       const force = forceQuery === true || forceQuery === 'true' ? true : forceQuery === false || forceQuery === 'false' ? false : undefined;
-      const result = await this.populatorClient.postTilesArea(req.body, force);
+      const target = (req.query.target as string | undefined) || (req.headers['x-target-id'] as string | undefined);
+      const result =
+        target !== undefined
+          ? await this.populatorClient.postTilesArea(req.body, force, target)
+          : await this.populatorClient.postTilesArea(req.body, force);
       return res.status(httpStatus.OK).json(result);
     } catch (error) {
       return next(error);
@@ -30,7 +34,11 @@ export class TilesController {
     try {
       const forceQuery = req.query.force as unknown;
       const force = forceQuery === true || forceQuery === 'true' ? true : forceQuery === false || forceQuery === 'false' ? false : undefined;
-      const result = await this.populatorClient.postTilesList(req.body, force);
+      const target = (req.query.target as string | undefined) || (req.headers['x-target-id'] as string | undefined);
+      const result =
+        target !== undefined
+          ? await this.populatorClient.postTilesList(req.body, force, target)
+          : await this.populatorClient.postTilesList(req.body, force);
       return res.status(httpStatus.OK).json(result);
     } catch (error) {
       return next(error);

@@ -21,6 +21,7 @@ import { QueueDashboardView } from "./views/QueueDashboardView.tsx";
 import { HistoryView, HistoryRecord } from "./views/HistoryView.tsx";
 import { PresetsView, AreaPreset } from "./views/PresetsView.tsx";
 import { SelectedArea } from "./types/geometry.ts";
+import { PopulatorProvider } from "./contexts/PopulatorContext.tsx";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -103,168 +104,170 @@ export const App: React.FC = () => {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100vh",
-          width: "100vw",
-          overflow: "hidden",
-        }}
-      >
-        <Header />
-
-        {/* Navigation Tabs */}
-        <Paper
-          square
-          elevation={0}
-          sx={{
-            borderBottom: 1,
-            borderColor: "divider",
-            bgcolor: "background.paper",
-          }}
-        >
-          <Tabs
-            value={currentTab}
-            onChange={handleTabChange}
-            indicatorColor="primary"
-            textColor="primary"
-            variant="scrollable"
-            scrollButtons="auto"
-          >
-            <Tab
-              icon={<MapIcon fontSize="small" />}
-              iconPosition="start"
-              label="Queue Creator"
-            />
-            <Tab
-              icon={<DashboardIcon fontSize="small" />}
-              iconPosition="start"
-              label="Queue Status"
-            />
-            <Tab
-              icon={<HistoryIcon fontSize="small" />}
-              iconPosition="start"
-              label="Submission History"
-            />
-            <Tab
-              icon={<BookmarkIcon fontSize="small" />}
-              iconPosition="start"
-              label="Presets"
-            />
-          </Tabs>
-        </Paper>
-
-        {/* Tab Content Areas */}
+      <PopulatorProvider>
         <Box
           sx={{
-            flexGrow: 1,
             display: "flex",
             flexDirection: "column",
+            height: "100vh",
+            width: "100vw",
             overflow: "hidden",
           }}
         >
-          <CustomTabPanel value={currentTab} index={0}>
-            <Box
-              sx={{
-                flexGrow: 1,
-                width: "100%",
-                height: "100%",
-                position: "relative",
-                display: "flex",
-              }}
-            >
-              <MapComponent
-                externalArea={selectedArea}
-                onAreaSelected={setSelectedArea}
-              />
+          <Header />
 
-              {/* Floating Form Overlay with Mode Toggle */}
+          {/* Navigation Tabs */}
+          <Paper
+            square
+            elevation={0}
+            sx={{
+              borderBottom: 1,
+              borderColor: "divider",
+              bgcolor: "background.paper",
+            }}
+          >
+            <Tabs
+              value={currentTab}
+              onChange={handleTabChange}
+              indicatorColor="primary"
+              textColor="primary"
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              <Tab
+                icon={<MapIcon fontSize="small" />}
+                iconPosition="start"
+                label="Queue Creator"
+              />
+              <Tab
+                icon={<DashboardIcon fontSize="small" />}
+                iconPosition="start"
+                label="Queue Status"
+              />
+              <Tab
+                icon={<HistoryIcon fontSize="small" />}
+                iconPosition="start"
+                label="Submission History"
+              />
+              <Tab
+                icon={<BookmarkIcon fontSize="small" />}
+                iconPosition="start"
+                label="Presets"
+              />
+            </Tabs>
+          </Paper>
+
+          {/* Tab Content Areas */}
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <CustomTabPanel value={currentTab} index={0}>
               <Box
                 sx={{
-                  position: "absolute",
-                  top: 16,
-                  right: 70,
-                  zIndex: 10,
+                  flexGrow: 1,
+                  width: "100%",
+                  height: "100%",
+                  position: "relative",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: 1,
                 }}
               >
-                <Paper
-                  elevation={3}
+                <MapComponent
+                  externalArea={selectedArea}
+                  onAreaSelected={setSelectedArea}
+                />
+
+                {/* Floating Form Overlay with Mode Toggle */}
+                <Box
                   sx={{
-                    p: 0.5,
+                    position: "absolute",
+                    top: 16,
+                    right: 70,
+                    zIndex: 10,
                     display: "flex",
-                    justifyContent: "center",
-                    bgcolor: "rgba(26, 34, 40, 0.95)",
-                    backdropFilter: "blur(6px)",
-                    border: "1px solid",
-                    borderColor: isPresetMode ? "secondary.main" : "divider",
-                    borderRadius: 2,
+                    flexDirection: "column",
+                    gap: 1,
                   }}
                 >
-                  <Button
-                    size="small"
-                    variant={creatorMode === "area" ? "contained" : "text"}
-                    color={isPresetMode ? "secondary" : "primary"}
-                    onClick={() => setCreatorMode("area")}
-                    sx={{ px: 2 }}
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      p: 0.5,
+                      display: "flex",
+                      justifyContent: "center",
+                      bgcolor: "rgba(26, 34, 40, 0.95)",
+                      backdropFilter: "blur(6px)",
+                      border: "1px solid",
+                      borderColor: isPresetMode ? "secondary.main" : "divider",
+                      borderRadius: 2,
+                    }}
                   >
-                    {isPresetMode ? "Preset Designer" : "Area Mode"}
-                  </Button>
-                  {!isPresetMode && (
                     <Button
                       size="small"
-                      variant={creatorMode === "list" ? "contained" : "text"}
-                      color="primary"
-                      onClick={() => setCreatorMode("list")}
+                      variant={creatorMode === "area" ? "contained" : "text"}
+                      color={isPresetMode ? "secondary" : "primary"}
+                      onClick={() => setCreatorMode("area")}
                       sx={{ px: 2 }}
                     >
-                      Tile List Mode
+                      {isPresetMode ? "Preset Designer" : "Area Mode"}
                     </Button>
+                    {!isPresetMode && (
+                      <Button
+                        size="small"
+                        variant={creatorMode === "list" ? "contained" : "text"}
+                        color="primary"
+                        onClick={() => setCreatorMode("list")}
+                        sx={{ px: 2 }}
+                      >
+                        Tile List Mode
+                      </Button>
+                    )}
+                  </Paper>
+
+                  {creatorMode === "area" ? (
+                    <AreaForm
+                      selectedArea={selectedArea}
+                      onAreaChange={setSelectedArea}
+                      isPresetMode={isPresetMode}
+                      onCancelPresetMode={() => setIsPresetMode(false)}
+                      onPresetSaved={() => {
+                        setIsPresetMode(false);
+                        setCurrentTab(3); // Switch back to Presets Tab
+                      }}
+                    />
+                  ) : (
+                    <TileListForm />
                   )}
-                </Paper>
-
-                {creatorMode === "area" ? (
-                  <AreaForm
-                    selectedArea={selectedArea}
-                    onAreaChange={setSelectedArea}
-                    isPresetMode={isPresetMode}
-                    onCancelPresetMode={() => setIsPresetMode(false)}
-                    onPresetSaved={() => {
-                      setIsPresetMode(false);
-                      setCurrentTab(3); // Switch back to Presets Tab
-                    }}
-                  />
-                ) : (
-                  <TileListForm />
-                )}
+                </Box>
               </Box>
-            </Box>
-          </CustomTabPanel>
+            </CustomTabPanel>
 
-          <CustomTabPanel value={currentTab} index={1}>
-            <QueueDashboardView />
-          </CustomTabPanel>
+            <CustomTabPanel value={currentTab} index={1}>
+              <QueueDashboardView />
+            </CustomTabPanel>
 
-          <CustomTabPanel value={currentTab} index={2}>
-            <HistoryView onReplayJob={handleReplayJob} />
-          </CustomTabPanel>
+            <CustomTabPanel value={currentTab} index={2}>
+              <HistoryView onReplayJob={handleReplayJob} />
+            </CustomTabPanel>
 
-          <CustomTabPanel value={currentTab} index={3}>
-            <PresetsView
-              onLoadPreset={handleLoadPreset}
-              onNavigateToDraw={() => {
-                setSelectedArea(null);
-                setIsPresetMode(true);
-                setCreatorMode("area");
-                setCurrentTab(0);
-              }}
-            />
-          </CustomTabPanel>
+            <CustomTabPanel value={currentTab} index={3}>
+              <PresetsView
+                onLoadPreset={handleLoadPreset}
+                onNavigateToDraw={() => {
+                  setSelectedArea(null);
+                  setIsPresetMode(true);
+                  setCreatorMode("area");
+                  setCurrentTab(0);
+                }}
+              />
+            </CustomTabPanel>
+          </Box>
         </Box>
-      </Box>
+      </PopulatorProvider>
     </ThemeProvider>
   );
 };

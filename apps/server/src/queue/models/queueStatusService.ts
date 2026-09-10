@@ -1,9 +1,10 @@
 import type { Logger } from '@map-colonies/js-logger';
-import { inject, injectable, singleton } from 'tsyringe';
+import { inject, singleton } from 'tsyringe';
 import { PgBoss } from 'pg-boss';
 import { SERVICES } from '../../common/constants';
 import type { ConfigType } from '../../common/config';
 import { buildSslOptions } from '../../common/db/ssl';
+import { DiscoveryService } from '../../discovery/models/discoveryService';
 
 export interface QueueStat {
   queueName: string;
@@ -18,6 +19,9 @@ export interface QueueOverview {
   status: 'UP' | 'DEGRADED' | 'DOWN';
   timestamp: string;
   populatorServiceUrl: string;
+  targetId?: string;
+  targetName?: string;
+  databaseName?: string;
   dbConnected: boolean;
   queues: QueueStat[];
   summary: {
@@ -31,21 +35,22 @@ export interface QueueOverview {
 
 @singleton()
 export class QueueStatusService {
-  private readonly populatorUrl: string;
-  private readonly projectName: string;
-  private pgbossInstance: PgBoss | null = null;
+  private readonly defaultPopulatorUrl: string;
+  private readonly defaultProjectName: string;
+  private readonly pgbossPool = new Map<string, PgBoss>();
 
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: ConfigType,
-    @inject(SERVICES.LOGGER) private readonly logger: Logger
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(DiscoveryService) private readonly discoveryService?: DiscoveryService
   ) {
-    this.populatorUrl = (this.config.get as any)('populator.url') ?? 'http://localhost:8081';
-    this.projectName = (this.config.get as any)('app.projectName') ?? 'default';
+    this.defaultPopulatorUrl = (this.config.get as any)('populator.url') ?? 'http://localhost:8081';
+    this.defaultProjectName = (this.config.get as any)('app.projectName') ?? 'buildings';
   }
 
-  private getPgBoss(): PgBoss | null {
-    if (this.pgbossInstance) {
-      return this.pgbossInstance;
+  private getPgBossForDatabase(databaseName: string): PgBoss | null {
+    if (this.pgbossPool.has(databaseName)) {
+      return this.pgbossPool.get(databaseName)!;
     }
 
     try {
@@ -59,32 +64,54 @@ export class QueueStatusService {
           port: dbConfig.port,
           user,
           password,
-          database: dbConfig.database,
+          database: databaseName,
           schema: dbConfig.schema ?? 'pgboss',
-          application_name: 'metatile-queue-populator-ui',
+          application_name: `metatile-queue-populator-ui-${databaseName}`,
           ssl: sslOptions || undefined,
         });
 
         // Attach error event listener so background pool connection timeouts do not crash the process
         instance.on('error', (err: any) => {
-          this.logger.warn({ msg: 'PgBoss background error encountered', error: err.message });
+          this.logger.warn({ msg: 'PgBoss background error encountered', database: databaseName, error: err.message });
         });
 
-        this.pgbossInstance = instance;
-        return this.pgbossInstance;
+        this.pgbossPool.set(databaseName, instance);
+        return instance;
       }
     } catch (err: any) {
-      this.logger.warn({ msg: 'Could not initialize PgBoss connection', err: err.message });
+      this.logger.warn({ msg: 'Could not initialize PgBoss connection', database: databaseName, err: err.message });
     }
     return null;
   }
 
-  public async getQueueStatus(): Promise<QueueOverview> {
-    this.logger.debug({ msg: 'Fetching queue metrics and health overview' });
+  public async getQueueStatus(targetId?: string): Promise<QueueOverview> {
+    let projectName = this.defaultProjectName;
+    let populatorUrl = this.defaultPopulatorUrl;
+    let targetName = this.defaultProjectName;
+    let resolvedTargetId = targetId || this.defaultProjectName;
+    let dbName = (this.config.get as any)('db.database') ?? `vector-rendering-${projectName}`;
+
+    if (this.discoveryService) {
+      const target = await this.discoveryService.getTarget(targetId);
+      if (target) {
+        projectName = target.projectName;
+        populatorUrl = target.url;
+        targetName = target.name;
+        resolvedTargetId = target.id;
+        dbName = target.dbName;
+      }
+    }
+
+    this.logger.debug({
+      msg: 'Fetching queue metrics and health overview',
+      targetId: resolvedTargetId,
+      projectName,
+      dbName,
+    });
 
     let populatorHealthy = false;
     try {
-      const healthRes = await fetch(`${this.populatorUrl}/docs/api/`, { method: 'HEAD' }).catch(() => null);
+      const healthRes = await fetch(`${populatorUrl}/docs/api/`, { method: 'HEAD' }).catch(() => null);
       populatorHealthy = !!healthRes;
     } catch {
       populatorHealthy = false;
@@ -93,11 +120,11 @@ export class QueueStatusService {
     let dbConnected = false;
     const requestPrefix = 'tiles-requests';
     const tilesPrefix = 'tiles';
-    const targetRequestQueue = `${requestPrefix}-${this.projectName}`;
-    const targetTilesQueue = `${tilesPrefix}-${this.projectName}`;
+    const targetRequestQueue = `${requestPrefix}-${projectName}`;
+    const targetTilesQueue = `${tilesPrefix}-${projectName}`;
     const queues: QueueStat[] = [];
 
-    const pgboss = this.getPgBoss();
+    const pgboss = this.getPgBossForDatabase(dbName);
 
     if (pgboss) {
       try {
@@ -139,7 +166,11 @@ export class QueueStatusService {
           }
         }
       } catch (err: any) {
-        this.logger.warn({ msg: 'Postgres / pg-boss connection unreachable, returning telemetry state', error: err.message });
+        this.logger.warn({
+          msg: 'Postgres / pg-boss connection unreachable, returning telemetry state',
+          database: dbName,
+          error: err.message,
+        });
       }
     }
 
@@ -167,7 +198,10 @@ export class QueueStatusService {
     return {
       status: overallStatus,
       timestamp: new Date().toISOString(),
-      populatorServiceUrl: this.populatorUrl,
+      populatorServiceUrl: populatorUrl,
+      targetId: resolvedTargetId,
+      targetName,
+      databaseName: dbName,
       dbConnected,
       queues,
       summary,

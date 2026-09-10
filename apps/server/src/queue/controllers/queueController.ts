@@ -9,7 +9,8 @@ export class QueueController {
 
   public getStatus: RequestHandler = async (req, res, next) => {
     try {
-      const overview = await this.queueStatusService.getQueueStatus();
+      const target = (req.query.target as string | undefined) || (req.headers['x-target-id'] as string | undefined);
+      const overview = await this.queueStatusService.getQueueStatus(target);
       return res.status(httpStatus.OK).json(overview);
     } catch (error) {
       return next(error);

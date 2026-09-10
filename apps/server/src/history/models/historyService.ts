@@ -14,6 +14,7 @@ export interface HistoryRecord {
   parameters: Record<string, any>;
   summary: string;
   status: 'SUCCESS' | 'FAILED';
+  target?: string;
   responseMessage?: string;
 }
 
@@ -58,6 +59,8 @@ export class HistoryService {
       summary = `Tile List Job (${count} metatiles)`;
     }
 
+    const target = (parameters.target as string | undefined) || (parameters.targetName as string | undefined);
+
     const record: HistoryRecord = {
       id: randomUUID(),
       type,
@@ -65,6 +68,7 @@ export class HistoryService {
       parameters,
       summary,
       status,
+      target,
       responseMessage,
     };
 
@@ -76,6 +80,7 @@ export class HistoryService {
           type: record.type,
           parameters: record.parameters,
           status: record.status,
+          target: record.target,
           responseMessage: record.responseMessage,
         });
         await this.historyRepository.save(entity);
@@ -136,6 +141,7 @@ export class HistoryService {
             parameters: e.parameters,
             summary,
             status: e.status,
+            target: e.target || e.parameters?.target || e.parameters?.targetName,
             responseMessage: e.responseMessage,
           };
         });

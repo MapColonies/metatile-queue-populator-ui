@@ -36,6 +36,33 @@ describe('PopulatorClient', async () => {
       expect(response).toEqual(mockResponse);
     });
 
+    it('should forward request to dynamic target URL when targetId is provided', async () => {
+      const mockDiscoveryService = {
+        getTarget: vi.fn().mockResolvedValue({
+          id: 'rendering-osm',
+          name: 'OSM',
+          projectName: 'osm',
+          url: 'http://rendering-osm-metatile-queue-populator.vector-dev.svc.cluster.local:8080',
+        }),
+      };
+      const clientWithDiscovery = new PopulatorClient(configMock as any, logger, mockDiscoveryService as any);
+
+      const mockResponse = { message: 'Area request queued' };
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockResponse),
+      });
+
+      const body = { minZoom: 0, maxZoom: 10, priority: 5, area: [34, 31, 35, 32] };
+      await clientWithDiscovery.postTilesArea(body, true, 'rendering-osm');
+
+      expect(mockDiscoveryService.getTarget).toHaveBeenCalledWith('rendering-osm');
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://rendering-osm-metatile-queue-populator.vector-dev.svc.cluster.local:8080/tiles/area?force=true',
+        expect.anything()
+      );
+    });
+
     it('should sanitize Feature with null properties to empty object', async () => {
       const mockResponse = { message: 'OK' };
       global.fetch = vi.fn().mockResolvedValue({
@@ -52,7 +79,15 @@ describe('PopulatorClient', async () => {
           properties: null,
           geometry: {
             type: 'Polygon',
-            coordinates: [[[35, 32], [36, 32], [36, 33], [35, 33], [35, 32]]],
+            coordinates: [
+              [
+                [35, 32],
+                [36, 32],
+                [36, 33],
+                [35, 33],
+                [35, 32],
+              ],
+            ],
           },
         },
       };
@@ -66,7 +101,15 @@ describe('PopulatorClient', async () => {
           properties: {},
           geometry: {
             type: 'Polygon',
-            coordinates: [[[35, 32], [36, 32], [36, 33], [35, 33], [35, 32]]],
+            coordinates: [
+              [
+                [35, 32],
+                [36, 32],
+                [36, 33],
+                [35, 33],
+                [35, 32],
+              ],
+            ],
           },
         },
       };

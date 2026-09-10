@@ -36,6 +36,17 @@
   "populator": {
     "url": "http://localhost:8081"
   },
+  "discovery": {
+    "enabled": false,
+    "labelSelector": "app.kubernetes.io/name=metatile-queue-populator",
+    "partOfPrefix": "rendering-",
+    "cacheTtlMs": 30000,
+    "dbNamePattern": "vector-rendering-{project}",
+    "dbNameMapping": {
+      "buildings": "vector-rendering-buildings",
+      "osm": "vector-rendering-osm"
+    }
+  },
   "app": {
     "projectName": "buildings",
     "tilesBatchSize": 10000,

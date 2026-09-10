@@ -19,6 +19,11 @@ paths:
           required: false
           schema:
             type: boolean
+        - in: query
+          name: target
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -164,6 +169,12 @@ paths:
       tags:
         - queue
       summary: Get real-time queue health, active jobs, and status
+      parameters:
+        - in: query
+          name: target
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -184,6 +195,12 @@ paths:
                     type: string
                   populatorServiceUrl:
                     type: string
+                  targetId:
+                    type: string
+                  targetName:
+                    type: string
+                  databaseName:
+                    type: string
                   queues:
                     type: array
                     items:
@@ -196,6 +213,12 @@ paths:
       tags:
         - queue
       summary: Get queue metrics overview
+      parameters:
+        - in: query
+          name: target
+          required: false
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -411,6 +434,11 @@ paths:
           required: false
           schema:
             type: boolean
+        - in: query
+          name: target
+          required: false
+          schema:
+            type: string
       requestBody:
         required: true
         content:
@@ -428,6 +456,69 @@ paths:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+  /discovery/targets:
+    get:
+      operationId: getDiscoveryTargets
+      tags:
+        - discovery
+      summary: Retrieve all discovered or configured metatile queue populator targets
+      parameters:
+        - in: query
+          name: refresh
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  targets:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - name
+                        - projectName
+                        - url
+                        - partOf
+                        - dbName
+                        - source
+                        - isDefault
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        projectName:
+                          type: string
+                        url:
+                          type: string
+                        partOf:
+                          type: string
+                        dbName:
+                          type: string
+                        source:
+                          type: string
+                          enum:
+                            - auto
+                            - static
+                        isDefault:
+                          type: boolean
+                        status:
+                          type: string
+                          enum:
+                            - UP
+                            - DOWN
+                            - UNKNOWN
+                        emoji:
+                          type: string
         5XX:
           $ref: '#/components/responses/UnexpectedError'
 security:

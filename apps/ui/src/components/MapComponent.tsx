@@ -245,7 +245,10 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       featureProjection: "EPSG:3857",
       dataProjection: "EPSG:4326",
     });
-    if (!geojsonObject.properties || typeof geojsonObject.properties !== "object") {
+    if (
+      !geojsonObject.properties ||
+      typeof geojsonObject.properties !== "object"
+    ) {
       geojsonObject.properties = {};
     }
 

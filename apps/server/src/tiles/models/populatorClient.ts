@@ -4,6 +4,7 @@ import httpStatus from 'http-status-codes';
 import { SERVICES } from '../../common/constants';
 import type { ConfigType } from '../../common/config';
 import { HttpError } from '../../common/errors';
+import { DiscoveryService } from '../../discovery/models/discoveryService';
 
 export interface PostTilesAreaResponse {
   message: string;
@@ -85,20 +86,32 @@ export class PopulatorClient {
 
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: ConfigType,
-    @inject(SERVICES.LOGGER) private readonly logger: Logger
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(DiscoveryService) private readonly discoveryService?: DiscoveryService
   ) {
     this.populatorUrl = (this.config.get as any)('populator.url') ?? 'http://localhost:8081';
   }
 
-  public async postTilesArea(body: unknown, force?: boolean): Promise<PostTilesAreaResponse> {
-    const url = new URL('/tiles/area', this.populatorUrl);
+  public async getBaseUrl(targetId?: string): Promise<string> {
+    if (this.discoveryService) {
+      const target = await this.discoveryService.getTarget(targetId);
+      if (target?.url) {
+        return target.url;
+      }
+    }
+    return this.populatorUrl;
+  }
+
+  public async postTilesArea(body: unknown, force?: boolean, targetId?: string): Promise<PostTilesAreaResponse> {
+    const baseUrl = await this.getBaseUrl(targetId);
+    const url = new URL('/tiles/area', baseUrl);
     if (force !== undefined) {
       url.searchParams.set('force', String(force));
     }
 
     const sanitizedBody = sanitizeTilesAreaBody(body);
 
-    this.logger.info({ msg: 'Forwarding /tiles/area request to populator', targetUrl: url.toString() });
+    this.logger.info({ msg: 'Forwarding /tiles/area request to populator', targetUrl: url.toString(), targetId });
 
     try {
       const response = await fetch(url.toString(), {
@@ -126,13 +139,14 @@ export class PopulatorClient {
     }
   }
 
-  public async postTilesList(body: unknown, force?: boolean): Promise<PostTilesListResponse> {
-    const url = new URL('/tiles/list', this.populatorUrl);
+  public async postTilesList(body: unknown, force?: boolean, targetId?: string): Promise<PostTilesListResponse> {
+    const baseUrl = await this.getBaseUrl(targetId);
+    const url = new URL('/tiles/list', baseUrl);
     if (force !== undefined) {
       url.searchParams.set('force', String(force));
     }
 
-    this.logger.info({ msg: 'Forwarding /tiles/list request to populator', targetUrl: url.toString() });
+    this.logger.info({ msg: 'Forwarding /tiles/list request to populator', targetUrl: url.toString(), targetId });
 
     try {
       const response = await fetch(url.toString(), {

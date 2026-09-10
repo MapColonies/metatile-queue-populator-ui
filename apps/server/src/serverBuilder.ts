@@ -18,6 +18,7 @@ import { PRESET_ROUTER_SYMBOL } from './presets/routes/presetRouter';
 import { RASTER_ROUTER_SYMBOL } from './raster/routes/rasterRouter';
 import { AUDIT_ROUTER_SYMBOL } from './audit/routes/auditRouter';
 import { AuditService } from './audit/models/auditService';
+import { DISCOVERY_ROUTER_SYMBOL } from './discovery/routes/discoveryRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -34,7 +35,8 @@ export class ServerBuilder {
     @inject(PRESET_ROUTER_SYMBOL) private readonly presetRouter: Router,
     @inject(RASTER_ROUTER_SYMBOL) private readonly rasterRouter: Router,
     @inject(AUDIT_ROUTER_SYMBOL) private readonly auditRouter: Router,
-    @inject(AuditService) private readonly auditService: AuditService
+    @inject(AuditService) private readonly auditService: AuditService,
+    @inject(DISCOVERY_ROUTER_SYMBOL) private readonly discoveryRouter: Router
   ) {
     this.serverInstance = express();
   }
@@ -64,6 +66,7 @@ export class ServerBuilder {
     this.serverInstance.use('/presets', this.presetRouter);
     this.serverInstance.use('/config', this.rasterRouter);
     this.serverInstance.use('/audit', this.auditRouter);
+    this.serverInstance.use('/discovery', this.discoveryRouter);
     this.buildDocsRoutes();
   }
 

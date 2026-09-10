@@ -193,6 +193,23 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/discovery/targets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Retrieve all discovered or configured metatile queue populator targets */
+    get: operations['getDiscoveryTargets'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 };
 export type webhooks = Record<string, never>;
 export type components = {
@@ -272,6 +289,7 @@ export interface operations {
     parameters: {
       query?: {
         force?: boolean;
+        target?: string;
       };
       header?: never;
       path?: never;
@@ -380,7 +398,9 @@ export interface operations {
   };
   getQueueStatus: {
     parameters: {
-      query?: never;
+      query?: {
+        target?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -398,6 +418,9 @@ export interface operations {
             status: string;
             timestamp: string;
             populatorServiceUrl?: string;
+            targetId?: string;
+            targetName?: string;
+            databaseName?: string;
             queues: Record<string, never>[];
             summary: Record<string, never>;
           };
@@ -407,7 +430,9 @@ export interface operations {
   };
   getQueueMetrics: {
     parameters: {
-      query?: never;
+      query?: {
+        target?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -608,6 +633,7 @@ export interface operations {
     parameters: {
       query?: {
         force?: boolean;
+        target?: string;
       };
       header?: never;
       path?: never;
@@ -631,6 +657,44 @@ export interface operations {
         };
       };
       400: components['responses']['BadRequest'];
+      '5XX': components['responses']['UnexpectedError'];
+    };
+  };
+  getDiscoveryTargets: {
+    parameters: {
+      query?: {
+        refresh?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            targets?: {
+              id: string;
+              name: string;
+              projectName: string;
+              url: string;
+              partOf: string;
+              dbName: string;
+              /** @enum {string} */
+              source: 'auto' | 'static';
+              isDefault: boolean;
+              /** @enum {string} */
+              status?: 'UP' | 'DOWN' | 'UNKNOWN';
+              emoji?: string;
+            }[];
+          };
+        };
+      };
       '5XX': components['responses']['UnexpectedError'];
     };
   };

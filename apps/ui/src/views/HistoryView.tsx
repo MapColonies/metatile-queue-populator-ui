@@ -28,6 +28,8 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import SecurityIcon from "@mui/icons-material/Security";
 import axios from "axios";
+import { usePopulator } from "../contexts/PopulatorContext";
+import { getTargetEmoji } from "../types/discovery";
 
 export interface HistoryRecord {
   id: string;
@@ -36,6 +38,7 @@ export interface HistoryRecord {
   parameters: Record<string, any>;
   summary: string;
   status: "SUCCESS" | "FAILED";
+  target?: string;
   responseMessage?: string;
 }
 
@@ -58,11 +61,14 @@ interface HistoryViewProps {
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
+  const { targets } = usePopulator();
   const [activeTab, setActiveTab] = useState<"history" | "audit">("history");
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState<string>("");
+  const [selectedTargetFilter, setSelectedTargetFilter] =
+    useState<string>("ALL");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,12 +98,25 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
     fetchData();
   }, [activeTab]);
 
-  const filteredHistory = history.filter(
-    (item) =>
-      item.summary.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      item.type.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      item.status.toLowerCase().includes(filterQuery.toLowerCase()),
-  );
+  const filteredHistory = history.filter((item) => {
+    const itemTarget = (
+      item.parameters?.targetName ||
+      item.target ||
+      item.parameters?.target ||
+      "default"
+    ).toLowerCase();
+    if (selectedTargetFilter !== "ALL") {
+      if (!itemTarget.includes(selectedTargetFilter.toLowerCase()))
+        return false;
+    }
+    const q = filterQuery.toLowerCase();
+    return (
+      item.summary.toLowerCase().includes(q) ||
+      item.type.toLowerCase().includes(q) ||
+      item.status.toLowerCase().includes(q) ||
+      itemTarget.includes(q)
+    );
+  });
 
   const filteredAuditLogs = auditLogs.filter(
     (item) =>
@@ -137,13 +156,49 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          {activeTab === "history" && (
+            <Stack direction="row" spacing={0.5}>
+              <Chip
+                label="All Pipelines"
+                size="small"
+                onClick={() => setSelectedTargetFilter("ALL")}
+                color={selectedTargetFilter === "ALL" ? "primary" : "default"}
+                variant={selectedTargetFilter === "ALL" ? "filled" : "outlined"}
+                sx={{ cursor: "pointer", fontWeight: 600 }}
+              />
+              {targets.map((target) => {
+                const isSelected =
+                  selectedTargetFilter.toLowerCase() ===
+                  target.projectName.toLowerCase();
+                const emoji =
+                  target.emoji ||
+                  getTargetEmoji(target.projectName || target.id);
+                return (
+                  <Chip
+                    key={target.id}
+                    label={`${emoji} ${target.name}`}
+                    size="small"
+                    onClick={() =>
+                      setSelectedTargetFilter(
+                        isSelected ? "ALL" : target.projectName,
+                      )
+                    }
+                    color={isSelected ? "primary" : "default"}
+                    variant={isSelected ? "filled" : "outlined"}
+                    sx={{ cursor: "pointer", fontWeight: 600 }}
+                  />
+                );
+              })}
+            </Stack>
+          )}
+
           <TextField
             size="small"
             placeholder="Search records..."
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            sx={{ width: 220 }}
+            sx={{ width: 180 }}
           />
           <Tooltip title="Refresh Data">
             <span>
@@ -207,6 +262,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
                   <TableCell sx={{ width: 40 }} />
                   <TableCell sx={{ fontWeight: 700 }}>Timestamp</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Job Type</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Target</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Summary</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 700, textAlign: "right" }}>
@@ -218,7 +274,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
                 {filteredHistory.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       align="center"
                       sx={{ py: 4, color: "text.secondary" }}
                     >
@@ -266,6 +322,42 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
                             sx={{ fontWeight: 600, fontSize: "0.75rem" }}
                           />
                         </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const rawTarget =
+                              row.parameters?.targetName ||
+                              row.target ||
+                              row.parameters?.target ||
+                              "";
+                            const matchingTarget = targets.find(
+                              (t) =>
+                                t.id.toLowerCase() ===
+                                  rawTarget.toLowerCase() ||
+                                t.projectName.toLowerCase() ===
+                                  rawTarget.toLowerCase(),
+                            );
+                            const displayName = matchingTarget
+                              ? matchingTarget.name
+                              : rawTarget || "Default";
+                            const emoji =
+                              matchingTarget?.emoji ||
+                              getTargetEmoji(rawTarget);
+                            return (
+                              <Chip
+                                label={`${emoji} ${displayName}`}
+                                size="small"
+                                sx={{
+                                  fontWeight: 700,
+                                  fontSize: "0.75rem",
+                                  bgcolor: "rgba(56, 189, 248, 0.15)",
+                                  color: "#38bdf8",
+                                  border: "1px solid",
+                                  borderColor: "rgba(56, 189, 248, 0.3)",
+                                }}
+                              />
+                            );
+                          })()}
+                        </TableCell>
                         <TableCell sx={{ fontWeight: 500 }}>
                           {row.summary}
                         </TableCell>
@@ -296,7 +388,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onReplayJob }) => {
                       {/* Expandable JSON payload details */}
                       <TableRow>
                         <TableCell
-                          colSpan={6}
+                          colSpan={7}
                           sx={{
                             py: 0,
                             borderBottom:

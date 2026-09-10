@@ -31,6 +31,8 @@ import ContentPasteIcon from "@mui/icons-material/ContentPaste";
 import SendIcon from "@mui/icons-material/Send";
 import GridViewIcon from "@mui/icons-material/GridView";
 import { appConfig } from "../config/appConfig.ts";
+import { TargetConfirmationCard } from "./TargetConfirmationCard.tsx";
+import { usePopulator } from "../contexts/PopulatorContext.tsx";
 import axios from "axios";
 
 export interface TileItem {
@@ -47,6 +49,7 @@ export const TileListForm: React.FC = () => {
   ]);
   const [force, setForce] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const { activeTarget } = usePopulator();
   const [pasteDialogOpen, setPasteDialogOpen] = useState<boolean>(false);
   const [pasteText, setPasteText] = useState<string>("");
   const [toast, setToast] = useState<{
@@ -196,14 +199,18 @@ export const TileListForm: React.FC = () => {
       }));
 
       const response = await axios.post("/api/tiles/list", payload, {
-        params: { force },
+        params: { force, target: activeTarget?.id },
       });
 
       // Record in Submission History
       await axios
         .post("/api/history", {
           type: "list",
-          parameters: { tiles: payload },
+          parameters: {
+            tiles: payload,
+            target: activeTarget?.id,
+            targetName: activeTarget?.name,
+          },
           status: "SUCCESS",
           responseMessage: response.data.message || "Queued successfully",
         })
@@ -233,6 +240,8 @@ export const TileListForm: React.FC = () => {
               y: t.y,
               metatile: t.metatile,
             })),
+            target: activeTarget?.id,
+            targetName: activeTarget?.name,
           },
           status: "FAILED",
           responseMessage: errorMsg,
@@ -404,6 +413,8 @@ export const TileListForm: React.FC = () => {
               </Typography>
             }
           />
+
+          <TargetConfirmationCard />
 
           <Button
             type="submit"
