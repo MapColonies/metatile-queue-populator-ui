@@ -19,7 +19,7 @@ export class TilesController {
     try {
       const forceQuery = req.query.force as unknown;
       const force = forceQuery === true || forceQuery === 'true' ? true : forceQuery === false || forceQuery === 'false' ? false : undefined;
-      const target = (req.query.target as string | undefined) || (req.headers['x-target-id'] as string | undefined);
+      const target = req.query.target || (req.headers['x-target-id'] as string | undefined);
       const result =
         target !== undefined
           ? await this.populatorClient.postTilesArea(req.body, force, target)
@@ -34,7 +34,7 @@ export class TilesController {
     try {
       const forceQuery = req.query.force as unknown;
       const force = forceQuery === true || forceQuery === 'true' ? true : forceQuery === false || forceQuery === 'false' ? false : undefined;
-      const target = (req.query.target as string | undefined) || (req.headers['x-target-id'] as string | undefined);
+      const target = req.query.target || (req.headers['x-target-id'] as string | undefined);
       const result =
         target !== undefined
           ? await this.populatorClient.postTilesList(req.body, force, target)

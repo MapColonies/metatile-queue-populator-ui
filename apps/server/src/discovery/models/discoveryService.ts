@@ -153,7 +153,7 @@ export class DiscoveryService {
 
   public resolveDbName(projectName: string): string {
     const mapping = (this.config.get as any)('discovery.dbNameMapping') as Record<string, string> | undefined;
-    if (mapping && mapping[projectName.toLowerCase()]) {
+    if (mapping?.[projectName.toLowerCase()]) {
       return mapping[projectName.toLowerCase()]!;
     }
     const pattern = ((this.config.get as any)('discovery.dbNamePattern') as string | undefined) ?? 'vector-rendering-{project}';
@@ -164,7 +164,7 @@ export class DiscoveryService {
     // Look for render-{}- or rendering-{}-
     // 1. render-{}-metatile-queue-populator or rendering-{}-metatile-queue-populator
     let m = rawName.match(/^(?:render|rendering)-(.*?)-(?:metatile-queue-populator.*|queue-populator.*|populator.*)$/);
-    if (m && m[1]) {
+    if (m?.[1]) {
       return {
         projectName: m[1],
         displayName: this.formatFriendlyName(m[1]),
@@ -174,7 +174,7 @@ export class DiscoveryService {
 
     // 2. render-{}-something or rendering-{}-something (with delimiter)
     m = rawName.match(/^(?:render|rendering)-([^-]+)-(?:.+)$/);
-    if (m && m[1]) {
+    if (m?.[1]) {
       return {
         projectName: m[1],
         displayName: this.formatFriendlyName(m[1]),
@@ -184,7 +184,7 @@ export class DiscoveryService {
 
     // 3. render-{} or rendering-{} (exact match without trailing delimiter)
     m = rawName.match(/^(?:render|rendering)-(.*)$/);
-    if (m && m[1]) {
+    if (m?.[1]) {
       return {
         projectName: m[1],
         displayName: this.formatFriendlyName(m[1]),
@@ -276,15 +276,15 @@ export class DiscoveryService {
     }
 
     const agent = new https.Agent(agentOptions);
-    let items: Array<{
+    let items: {
       metadata?: {
         name?: string;
         labels?: Record<string, string>;
       };
       spec?: {
-        ports?: Array<{ port: number; name?: string }>;
+        ports?: { port: number; name?: string }[];
       };
-    }> = [];
+    }[] = [];
 
     // Try discovering Deployments first to target active deployments
     const deploymentsPath = `/apis/apps/v1/namespaces/${namespace}/deployments?labelSelector=${encodeURIComponent(labelSelector)}`;

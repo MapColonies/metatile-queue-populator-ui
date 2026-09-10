@@ -141,8 +141,8 @@ describe('DiscoveryService', async () => {
       ];
 
       const withEmojis = attachEmojis(targets);
-      expect(withEmojis[0]?.emoji).toBeTruthy();
-      expect(withEmojis[1]?.emoji).toBeTruthy();
+      expect(withEmojis[0]?.emoji).toBe(true);
+      expect(withEmojis[1]?.emoji).toBe(true);
       expect(withEmojis[0]?.emoji).not.toBe(withEmojis[1]?.emoji);
     });
   });

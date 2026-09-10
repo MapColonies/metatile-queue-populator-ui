@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DataSource } from 'typeorm';
+import type * as TypeORM from 'typeorm';
 import { createDataSource } from '../../../../src/common/db/dataSource';
 import * as sslModule from '../../../../src/common/db/ssl';
 
 vi.mock('typeorm', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('typeorm')>();
+  const actual = await importOriginal<typeof TypeORM>();
   const MockDataSource = vi.fn().mockImplementation(function (options: any) {
     return {
       options,

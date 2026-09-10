@@ -1,16 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
+import type * as FsModule from 'node:fs';
+
+import { buildSslOptions, type DbSslConfig } from '../../../../src/common/db/ssl';
 
 vi.mock('node:fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:fs')>();
+  const actual = await importOriginal<typeof FsModule>();
   return {
     ...actual,
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
   };
 });
-
-import { buildSslOptions, type DbSslConfig } from '../../../../src/common/db/ssl';
 
 describe('buildSslOptions', () => {
   const existsSyncMock = vi.mocked(fs.existsSync);
@@ -94,7 +95,7 @@ describe('buildSslOptions', () => {
 
   it('reads CA, cert and key files when paths exist for full mTLS', () => {
     existsSyncMock.mockReturnValue(true);
-    readFileSyncMock.mockImplementation((path) => `CONTENT_OF_${path}`);
+    readFileSyncMock.mockImplementation((path) => `CONTENT_OF_${String(path)}`);
 
     const config: DbSslConfig = {
       enabled: true,
