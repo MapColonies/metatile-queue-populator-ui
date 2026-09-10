@@ -1,34 +1,36 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
   "release-type": "node",
-  "include-component-in-tag": true,
+  "include-component-in-tag": false,
   "packages": {
-    "apps/server": {
-      "component": "server",
-      "release-type": "node",
-      "package-name": "@metatile-queue-populator-ui/server",
+    ".": {
       "extra-files": [
         {
           "type": "yaml",
-          "path": "../../helm/metatile-queue-populator-ui/Chart.yaml",
+          "path": "helm/Chart.yaml",
           "jsonpath": "$.version"
         },
         {
           "type": "yaml",
-          "path": "../../helm/metatile-queue-populator-ui/Chart.yaml",
+          "path": "helm/Chart.yaml",
           "jsonpath": "$.appVersion"
         },
         {
           "type": "yaml",
-          "path": "openapi3.yaml",
+          "path": "apps/server/openapi3.yaml",
           "jsonpath": "$.info.version"
+        },
+        {
+          "type": "json",
+          "path": "apps/server/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "apps/ui/package.json",
+          "jsonpath": "$.version"
         }
       ]
-    },
-    "apps/ui": {
-      "component": "ui",
-      "release-type": "node",
-      "package-name": "@metatile-queue-populator-ui/ui"
     }
   },
   "changelog-sections": [
